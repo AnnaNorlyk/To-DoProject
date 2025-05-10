@@ -9,7 +9,7 @@ jobs:
   delivery:
     runs-on: ubuntu-latest
     steps:
-      # Check out full history (needed for semver)
+      # Check out full history 
       - name: Check out repository
         uses: actions/checkout@v4
         with:
@@ -22,7 +22,7 @@ jobs:
         with:
           bump_each_commit: true
 
-      # Push new tag so subsequent runs see the updated version
+      # Push new tag so following runs see the updated version
       - name: Push updated tag
         run: |
           git config user.name "github-actions"

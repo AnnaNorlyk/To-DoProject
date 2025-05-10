@@ -2,7 +2,8 @@ name: Hello-World Deploy
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - master
 
 jobs:
   deploy-hello:
