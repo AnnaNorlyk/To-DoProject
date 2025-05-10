@@ -27,7 +27,7 @@ jobs:
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
           source: "docker-compose.yml"
           target: "~/todo-bare"
 
@@ -36,7 +36,7 @@ jobs:
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
           script: |
             cd ~/todo-bare
             docker compose up -d --build
