@@ -14,9 +14,10 @@ jobs:
 
       - name: Build frontend
         run: |
-          cd frontend
-          npm ci
-          npm run build
+            cd frontend
+            npm install       
+            npm run build
+
 
       - name: Build & push Docker image
         run: docker build -t hello-frontend ./frontend
