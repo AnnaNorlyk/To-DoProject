@@ -22,14 +22,17 @@ jobs:
       - name: Build & push Docker image
         run: docker build -t hello-frontend ./frontend
 
-      - name: Copy compose file to server
+      - name: Copy compose & frontend to server
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.STAGING_SERVER_SSH_KEY }}
-          source: "docker-compose.yml"
-          target: "~/todo-bare"
+            host:     ${{ secrets.SSH_HOST }}
+            username: ${{ secrets.SSH_USER }}
+            key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
+            source: |
+                docker-compose.yml
+                frontend/**
+            target:   "~/todo-bare"
+
 
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v0.1.7
