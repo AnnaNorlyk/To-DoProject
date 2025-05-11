@@ -29,8 +29,8 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
           source: |
-            docker-compose.yml
-            frontend/**
+            To-DoProject/docker-compose.yml  
+            To-DoProject/frontend/**       
           target:   "~/todo-bare"
 
       - name: Deploy via SSH
