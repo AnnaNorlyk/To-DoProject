@@ -14,20 +14,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Build & push the frontend image to GHCR
+      # Convert the repo owner to lowercase for Docker namespace
+      - name: Convert namespace to lowercase
+        id: tolower
+        run: echo "NS=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      # Build & Push Frontend Image 
       - name: Build & Push Frontend Image
         run: |
-          echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-
-          # Use toLower() to ensure the repo path is lowercase
-          DOCKER_NS=${{ toLower(github.repository_owner) }}
+          echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
           docker build \
-            -t ghcr.io/${DOCKER_NS}/todo-frontend:staging \
+            -t ghcr.io/${{ env.NS }}/todo-frontend:staging \
             -f frontend/Dockerfile \
             frontend
 
-          docker push ghcr.io/${DOCKER_NS}/todo-frontend:staging
+          docker push ghcr.io/${{ env.NS }}/todo-frontend:staging
+
 
 
       # Deliver docker-compose.yml to staging
