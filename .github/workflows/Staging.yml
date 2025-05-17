@@ -2,38 +2,26 @@ name: Build and Deploy Frontend to Staging
 
 on:
   push:
-    branches:
-      - master
+    branches: ["main"]
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      # Check out the code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Convert the repo owner to lowercase for Docker namespace
-      - name: Convert namespace to lowercase
-        id: tolower
-        run: echo "NS=$(echo ${{ github.repository_owner }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
-
-      # Build & Push Frontend Image 
       - name: Build & Push Frontend Image
         run: |
           echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-
+          NS="${{ github.repository_owner }}"; NS="${NS,,}"
           docker build \
-            -t ghcr.io/${{ env.NS }}/todo-frontend:staging \
+            -t ghcr.io/${NS}/todo-frontend:staging \
             -f frontend/Dockerfile \
             frontend
+          docker push ghcr.io/${NS}/todo-frontend:staging
 
-          docker push ghcr.io/${{ env.NS }}/todo-frontend:staging
-
-
-
-      # Deliver docker-compose.yml to staging
       - name: Deliver Docker Compose file to staging
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -69,8 +57,7 @@ jobs:
       #       MYSQL_PASSWORD=${{ secrets.DB_USER_PASSWORD }}
       #       EOF
 
-      # Pull and start services on staging
-      - name: Run Docker Compose on staging server
+      - name: Deploy to staging via SSH
         uses: appleboy/ssh-action@v0.1.7
         with:
           host:     ${{ secrets.SSH_HOST }}
@@ -78,5 +65,6 @@ jobs:
           key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
           script: |
             cd ~/todo-app
+            sed -i 's|ghcr.io/AnnaNorlyk/|ghcr.io/annanorlyk/|g' docker-compose.yml
             docker compose pull
             docker compose up -d
