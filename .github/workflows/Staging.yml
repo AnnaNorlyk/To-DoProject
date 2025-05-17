@@ -1,44 +1,73 @@
-name: Hello-World Deploy
+name: Build and Deploy Frontend to Staging
 
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
-  deploy-hello:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      # Check out the code
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Build frontend
+      # Build & push the frontend image to GHCR
+      - name: Build & Push Frontend Image
         run: |
-          cd frontend
-          npm install
-          npm run build
+          echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker build \
+            -t ghcr.io/${{ github.repository_owner }}/todo-frontend:staging \
+            -f frontend/Dockerfile \
+            frontend
+          docker push ghcr.io/${{ github.repository_owner }}/todo-frontend:staging
 
-      - name: Build & push Docker image
-        run: docker build -t hello-frontend ./frontend
-
-      - name: Copy compose & frontend to server
+      # Deliver docker-compose.yml to staging
+      - name: Deliver Docker Compose file to staging
         uses: appleboy/scp-action@v0.1.7
         with:
           host:     ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
-          source: |
-            docker-compose.yml
-            frontend             # Temp 
-          target:   "~/todo-bare"
+          source:   "docker-compose.yml"
+          target:   "~/todo-app/"
 
-      - name: Deploy via SSH
+      # Deliver database migrations if/when you add a backend (Relic from old project)
+      # - name: Deliver migrations to staging
+      #   uses: appleboy/scp-action@v0.1.7
+      #   with:
+      #     host:     ${{ secrets.SSH_HOST }}
+      #     username: ${{ secrets.SSH_USER }}
+      #     key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
+      #     source:   "database/flyway/sql/*"
+      #     target:   "~/todo-app/database/flyway/sql/"
+
+      # Create .env on staging for future DB configuration (Relic from old project)
+      # - name: Create .env on staging
+      #   uses: appleboy/ssh-action@v0.1.10
+      #   with:
+      #     host:     ${{ secrets.SSH_HOST }}
+      #     username: ${{ secrets.SSH_USER }}
+      #     key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
+      #     script: |
+      #       cd ~/todo-app
+      #       cat <<EOF > .env
+      #       MYSQL_ROOT_PASSWORD=${{ secrets.DB_ROOT_PASSWORD }}
+      #       MYSQL_DATABASE=${{ secrets.DB_NAME }}
+      #       MYSQL_USER=${{ secrets.DB_USER }}
+      #       MYSQL_PASSWORD=${{ secrets.DB_USER_PASSWORD }}
+      #       EOF
+
+      # Pull and start services on staging
+      - name: Run Docker Compose on staging server
         uses: appleboy/ssh-action@v0.1.7
         with:
           host:     ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
           script: |
-            cd ~/todo-bare
-            docker compose up -d --build
+            cd ~/todo-app
+            docker compose pull
+            docker compose up -d
