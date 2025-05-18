@@ -30,7 +30,7 @@ jobs:
 
       - name: Start Docker Compose
         run: |
-          docker compose up -d db flyway backend
+          docker compose up -d mariadb flyway backend
         env:
           MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
           MYSQL_DATABASE:      ${{ secrets.MYSQL_DATABASE }}
