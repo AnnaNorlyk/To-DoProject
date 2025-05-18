@@ -35,16 +35,16 @@ jobs:
             frontend
           docker push ghcr.io/${NS}/todo-frontend:staging
 
-
-
+         
       - name: Deliver Docker Compose to staging
         uses: appleboy/scp-action@v0.1.7
         with:
-          host:     ${{ secrets.STAGING_SERVER_IP }}
-          username: ${{ secrets.STAGING_SERVER_USERNAME }}
-          key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
-          source:   docker-compose.yml
-          target:   todo-app/
+            host:     ${{ secrets.STAGING_SERVER_IP }}
+            username: ${{ secrets.STAGING_SERVER_USERNAME }}
+            key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
+            source:   docker-compose.yml
+            target:   todo-app/
+
 
       - name: Deliver Flyway migrations
         uses: appleboy/scp-action@v0.1.7
