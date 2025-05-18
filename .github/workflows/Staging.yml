@@ -1,9 +1,9 @@
-name: Build and Deploy Frontend to Staging
+name: Build and Deploy to Staging
 
 on:
   push:
-    branches:
-      - master
+    branches: 
+    - master
 
 jobs:
   build-and-deploy:
@@ -13,59 +13,67 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Build & Push Frontend Image
+      - name: Login to GHCR
         run: |
-          echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Build & push Docker images
+        run: |
           NS="${{ github.repository_owner }}"; NS="${NS,,}"
+          # Backend image
+          docker build \
+            -t ghcr.io/${NS}/todo-backend:staging \
+            -f Backend/Dockerfile \
+            Backend
+          docker push ghcr.io/${NS}/todo-backend:staging
+
+          # Frontend image
           docker build \
             -t ghcr.io/${NS}/todo-frontend:staging \
             -f frontend/Dockerfile \
             frontend
           docker push ghcr.io/${NS}/todo-frontend:staging
 
-      - name: Deliver Docker Compose file to staging
+      - name: Deliver Docker Compose to staging
         uses: appleboy/scp-action@v0.1.7
         with:
-          host:     ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
+          host:     ${{ secrets.STAGING_SERVER_IP }}
+          username: ${{ secrets.STAGING_SERVER_USERNAME }}
           key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
-          source:   "docker-compose.yml"
-          target:   "~/todo-app/"
+          source:   docker-compose.yml
+          target:   todo-app/
 
-      # Deliver database migrations if/when you add a backend (Relic from old project)
-      # - name: Deliver migrations to staging
-      #   uses: appleboy/scp-action@v0.1.7
-      #   with:
-      #     host:     ${{ secrets.SSH_HOST }}
-      #     username: ${{ secrets.SSH_USER }}
-      #     key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
-      #     source:   "database/flyway/sql/*"
-      #     target:   "~/todo-app/database/flyway/sql/"
-
-      # Create .env on staging for future DB configuration (Relic from old project)
-      # - name: Create .env on staging
-      #   uses: appleboy/ssh-action@v0.1.10
-      #   with:
-      #     host:     ${{ secrets.SSH_HOST }}
-      #     username: ${{ secrets.SSH_USER }}
-      #     key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
-      #     script: |
-      #       cd ~/todo-app
-      #       cat <<EOF > .env
-      #       MYSQL_ROOT_PASSWORD=${{ secrets.DB_ROOT_PASSWORD }}
-      #       MYSQL_DATABASE=${{ secrets.DB_NAME }}
-      #       MYSQL_USER=${{ secrets.DB_USER }}
-      #       MYSQL_PASSWORD=${{ secrets.DB_USER_PASSWORD }}
-      #       EOF
-
-      - name: Deploy to staging via SSH
-        uses: appleboy/ssh-action@v0.1.7
+      - name: Deliver Flyway migrations
+        uses: appleboy/scp-action@v0.1.7
         with:
-          host:     ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
+          host:     ${{ secrets.STAGING_SERVER_IP }}
+          username: ${{ secrets.STAGING_SERVER_USERNAME }}
+          key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
+          source:   db/migrations/*
+          target:   todo-app/db/migrations/
+
+      - name: Create .env on staging
+        uses: appleboy/ssh-action@v1.2.1
+        with:
+          host:     ${{ secrets.STAGING_SERVER_IP }}
+          username: ${{ secrets.STAGING_SERVER_USERNAME }}
           key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
           script: |
-            cd ~/todo-app
-            sed -i 's|ghcr.io/AnnaNorlyk/|ghcr.io/annanorlyk/|g' docker-compose.yml
+            cd todo-app
+            cat <<EOF > .env
+            MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
+            MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}
+            MYSQL_USER=${{ secrets.MYSQL_USER }}
+            MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}
+            EOF
+
+      - name: Deploy to staging
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host:     ${{ secrets.STAGING_SERVER_IP }}
+          username: ${{ secrets.STAGING_SERVER_USERNAME }}
+          key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
+          script: |
+            cd todo-app
             docker compose pull
             docker compose up -d

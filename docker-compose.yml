@@ -1,6 +1,58 @@
 version: "3.8"
+
 services:
+  mariadb:
+    image: mariadb:latest
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+      MYSQL_DATABASE: "${MYSQL_DATABASE}"
+      MYSQL_USER: "${MYSQL_USER}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h localhost -u root -p$MYSQL_ROOT_PASSWORD || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: ghcr.io/annanorlyk/todo-backend:staging
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    ports:
+      - "5000:80"
+    environment:
+      ASPNETCORE_URLS: "http://+:80"
+      ASPNETCORE_ENVIRONMENT: "Development"
+      MYSQL_HOST: "mariadb"
+      MYSQL_DATABASE: "${MYSQL_DATABASE}"
+      MYSQL_USER: "${MYSQL_USER}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
+    entrypoint: /bin/sh
+    command: -c "sleep 20 && dotnet /app/Backend.dll"
+
+  flyway:
+    image: flyway/flyway:latest
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    volumes:
+      - ./db/migrations:/flyway/sql
+    command: migrate
+    environment:
+      FLYWAY_URL: jdbc:mariadb://mariadb:3306/${MYSQL_DATABASE}
+      FLYWAY_USER: ${MYSQL_USER}
+      FLYWAY_PASSWORD: ${MYSQL_PASSWORD}
+
   frontend:
-    image: ghcr.io/AnnaNorlyk/todo-frontend:staging
+    image: ghcr.io/annanorlyk/todo-frontend:staging
+    depends_on:
+      backend:
+        condition: service_started
     ports:
       - "3000:80"
+    environment:
+      REACT_APP_BASE_URL: "http://backend"
