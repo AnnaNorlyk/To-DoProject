@@ -20,19 +20,21 @@ jobs:
       - name: Build & push Docker images
         run: |
           NS="${{ github.repository_owner }}"; NS="${NS,,}"
+
           # Backend image
           docker build \
             -t ghcr.io/${NS}/todo-backend:staging \
             -f Backend/Dockerfile \
-            Backend
+            . 
           docker push ghcr.io/${NS}/todo-backend:staging
 
-          # Frontend image
+          # Frontend image 
           docker build \
             -t ghcr.io/${NS}/todo-frontend:staging \
             -f frontend/Dockerfile \
             frontend
           docker push ghcr.io/${NS}/todo-frontend:staging
+
 
       - name: Deliver Docker Compose to staging
         uses: appleboy/scp-action@v0.1.7
