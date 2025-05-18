@@ -28,9 +28,13 @@ jobs:
           echo "MYSQL_USER=${{ secrets.MYSQL_USER }}"               >> .env
           echo "MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}"       >> .env
 
-      - name: Start Docker Compose
+      - name: Login to GHCR
         run: |
-          docker compose up -d mariadb flyway backend
+          echo "${{ secrets.CR_PAT }}" \
+            | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Start Docker Compose
+        run: docker compose up -d mariadb flyway backend
         env:
           MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
           MYSQL_DATABASE:      ${{ secrets.MYSQL_DATABASE }}
@@ -71,7 +75,9 @@ jobs:
             --break-at 80
 
       - name: Sonar End
-        run: dotnet sonarscanner end /d:sonar.login="${{ vars.SONAR_TOKEN }}"
+        run: |
+          dotnet sonarscanner end \
+            /d:sonar.login="${{ vars.SONAR_TOKEN }}"
 
       - name: Upload Coverage
         if: always()
