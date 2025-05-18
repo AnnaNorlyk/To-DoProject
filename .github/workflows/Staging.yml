@@ -2,8 +2,8 @@ name: Build and Deploy to Staging
 
 on:
   push:
-    branches: 
-    - master
+    branches:
+      - master
 
 jobs:
   build-and-deploy:
@@ -15,13 +15,14 @@ jobs:
 
       - name: Login to GHCR
         run: |
-          echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          echo "${{ secrets.CR_PAT }}" \
+            | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
       - name: Build & push Docker images
         run: |
           NS="${{ github.repository_owner }}"; NS="${NS,,}"
 
-          # Backend image 
+          # Backend image
           docker build \
             -t ghcr.io/${NS}/todo-backend:staging \
             -f API/Dockerfile \
@@ -35,22 +36,20 @@ jobs:
             frontend
           docker push ghcr.io/${NS}/todo-frontend:staging
 
-         
       - name: Deliver Docker Compose to staging
         uses: appleboy/scp-action@v0.1.7
         with:
-            host:     ${{ secrets.STAGING_SERVER_IP }}
-            username: ${{ secrets.STAGING_SERVER_USERNAME }}
-            key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
-            source:   docker-compose.yml
-            target:   todo-app/
-
+          host:     ${{ vars.STAGING_SERVER_IP }}
+          username: ${{ vars.STAGING_SERVER_USERNAME }}
+          key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
+          source:   docker-compose.yml
+          target:   todo-app/
 
       - name: Deliver Flyway migrations
         uses: appleboy/scp-action@v0.1.7
         with:
-          host:     ${{ secrets.STAGING_SERVER_IP }}
-          username: ${{ secrets.STAGING_SERVER_USERNAME }}
+          host:     ${{ vars.STAGING_SERVER_IP }}
+          username: ${{ vars.STAGING_SERVER_USERNAME }}
           key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
           source:   db/migrations/*
           target:   todo-app/db/migrations/
@@ -58,8 +57,8 @@ jobs:
       - name: Create .env on staging
         uses: appleboy/ssh-action@v1.2.1
         with:
-          host:     ${{ secrets.STAGING_SERVER_IP }}
-          username: ${{ secrets.STAGING_SERVER_USERNAME }}
+          host:     ${{ vars.STAGING_SERVER_IP }}
+          username: ${{ vars.STAGING_SERVER_USERNAME }}
           key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
           script: |
             cd todo-app
@@ -73,8 +72,8 @@ jobs:
       - name: Deploy to staging
         uses: appleboy/ssh-action@v0.1.10
         with:
-          host:     ${{ secrets.STAGING_SERVER_IP }}
-          username: ${{ secrets.STAGING_SERVER_USERNAME }}
+          host:     ${{ vars.STAGING_SERVER_IP }}
+          username: ${{ vars.STAGING_SERVER_USERNAME }}
           key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
           script: |
             cd todo-app
