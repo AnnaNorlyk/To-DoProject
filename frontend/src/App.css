@@ -1,72 +1,98 @@
-:root {
-    --bg-color: #f5f5eb; 
-    --accent-color: #9caf88; 
-    --text-color: #333;
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
 }
 
-body {
+:root {
+    --bg: #f7f4eb; /* cream background */
+    --accent: #9caf88; /* sage green */
+    --text: #333;
+}
+
+body, html, #root {
+    height: 100%;
     margin: 0;
-    height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
     font-family: sans-serif;
-    background-color: var(--bg-color);
+    background: var(--bg);
 }
 
 .app-container {
-    width: 100%;
-    max-width: 400px;
     padding: 1rem;
-    background-color: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    text-align: center;
 }
 
-    .app-container h1 {
-        margin-top: 0;
-        color: var(--accent-color);
-        text-align: center;
-    }
-
-.input-group {
-    display: flex;
-    gap: 0.5rem;
+.add-list-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
     margin-bottom: 1rem;
 }
 
-    .input-group input {
-        flex: 1;
-        padding: 0.75rem;
-        height: 2.5rem;
-        border: 1px solid var(--accent-color);
-        border-radius: 1.25rem;
-        font-size: 1rem;
-        outline: none;
-    }
+.lists-container {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
 
-    .input-group button {
-        padding: 0.5rem 1rem;
-        background-color: var(--accent-color);
-        border: none;
-        border-radius: 4px;
-        color: white;
-        font-size: 1rem;
-        cursor: pointer;
-    }
+.list-card {
+    background: white;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    width: 280px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
 
-        .input-group button:hover {
-            opacity: 0.9;
-        }
+.list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.delete-list-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.25rem;
+    color: var(--accent);
+    cursor: pointer;
+}
+
+.input-group input {
+    min-width: 0;
+    width: 100%;
+    padding: 0.5rem;
+    border: 2px solid var(--accent);
+    border-radius: 999px;
+    outline: none;
+    white-space: nowrap; 
+    overflow-x: auto; 
+}
 
 .todo-list {
     list-style: none;
     padding: 0;
-    margin: 0;
+    margin: 0.75rem 0 0;
 }
 
 .todo-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg);
+    margin-bottom: 0.5rem;
     padding: 0.5rem;
-    border-bottom: 1px solid #ddd;
-    color: var(--text-color);
+    border-radius: 0.25rem;
+    overflow-wrap: break-word;
+}
+
+.delete-todo-btn {
+    background: transparent;
+    border: none;
+    color: #c44;
+    cursor: pointer;
 }

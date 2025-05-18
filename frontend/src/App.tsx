@@ -1,40 +1,95 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import './App.css';
 
-const App: React.FC = () => {
-    const [todos, setTodos] = useState<string[]>([]);
-    const [input, setInput] = useState<string>('');
+type Todo = { id: number; text: string };
+type TodoList = { id: number; name: string; todos: Todo[] };
 
-    const addTodo = () => {
-        const text = input.trim();
-        if (!text) return;
-        setTodos([...todos, text]);
-        setInput('');
+let nextListId = 1;
+let nextTodoId = 1;
+
+export default function App() {
+    const [lists, setLists] = useState<TodoList[]>([
+        { id: nextListId++, name: 'List 1', todos: [] }
+    ]);
+
+    // Add a new empty list
+    const addList = () => {
+        setLists([
+            ...lists,
+            { id: nextListId++, name: `List ${nextListId - 1}`, todos: [] }
+        ]);
+    };
+
+    // Delete an entire list by id
+    const deleteList = (listId: number) => {
+        setLists(lists.filter(l => l.id !== listId));
+    };
+
+    // Add a todo to a specific list
+    const addTodo = (listId: number, text: string) => {
+        setLists(lists.map(l => {
+            if (l.id !== listId) return l;
+            const todo: Todo = { id: nextTodoId++, text };
+            return { ...l, todos: [...l.todos, todo] };
+        }));
+    };
+
+    // Delete a todo from a specific list
+    const deleteTodo = (listId: number, todoId: number) => {
+        setLists(lists.map(l => {
+            if (l.id !== listId) return l;
+            return { ...l, todos: l.todos.filter(t => t.id !== todoId) };
+        }));
     };
 
     return (
         <div className="app-container">
-            <h1>To-Do List</h1>
+            <button className="add-list-btn" onClick={addList}>
+                + Add List
+            </button>
 
-            <div className="input-group">
-                <input
-                    type="text"
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="What needs to be done?"
-                />
-                <button onClick={addTodo}>Add</button>
-            </div>
+            <div className="lists-container">
+                {lists.map(list => (
+                    <div key={list.id} className="list-card">
+                        <div className="list-header">
+                            <h2>{list.name}</h2>
+                            <button
+                                className="delete-list-btn"
+                                onClick={() => deleteList(list.id)}
+                            >
+                                ×
+                            </button>
+                        </div>
 
-            <ul className="todo-list">
-                {todos.map((todo, idx) => (
-                    <li key={idx} className="todo-item">
-                        {todo}
-                    </li>
+                        <div className="input-group">
+                            <input
+                                type="text"
+                                placeholder="New item…"
+                                onKeyDown={e => {
+                                    if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                                        addTodo(list.id, e.currentTarget.value.trim());
+                                        e.currentTarget.value = '';
+                                    }
+                                }}
+                            />
+                        </div>
+
+                        <ul className="todo-list">
+                            {list.todos.map(todo => (
+                                <li key={todo.id} className="todo-item">
+                                    {todo.text}
+                                    <button
+                                        className="delete-todo-btn"
+                                        onClick={() => deleteTodo(list.id, todo.id)}
+                                    >
+                                        ✕
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
                 ))}
-            </ul>
+            </div>
         </div>
     );
-};
-
-export default App;
+}
