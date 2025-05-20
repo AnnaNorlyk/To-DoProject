@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+﻿import { useState } from 'react';
 import './App.css';
 
 type Todo = { id: number; text: string };
