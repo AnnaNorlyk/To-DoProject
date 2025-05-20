@@ -2,23 +2,24 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using API.Models;
 
-namespace API.Data;
-
-public class TodoContext : DbContext
+namespace API.Data
 {
-    public TodoContext(DbContextOptions<TodoContext> opts) : base(opts) { }
-
-    public DbSet<TodoList> TodoLists { get; set; } = null!;
-    public DbSet<Todo> Todos { get; set; } = null!;
-
-    protected override void OnModelCreating(ModelBuilder mb)
+    public class TodoContext : DbContext
     {
-        mb.Entity<TodoList>()
-          .HasMany(l => l.Todos)
-          .WithOne(t => t.List!)
-          .HasForeignKey(t => t.TodoListId)
-          .OnDelete(DeleteBehavior.Cascade);
+        public TodoContext(DbContextOptions<TodoContext> opts) : base(opts) { }
 
-        base.OnModelCreating(mb);
+        public DbSet<TodoList> TodoLists { get; set; } = null!;
+        public DbSet<Todo> Todos { get; set; } = null!;
+
+        protected override void OnModelCreating(ModelBuilder mb)
+        {
+            mb.Entity<TodoList>()
+              .HasMany(l => l.Todos)
+              .WithOne(t => t.List!)
+              .HasForeignKey(t => t.TodoListId)
+              .OnDelete(DeleteBehavior.Cascade);
+
+            base.OnModelCreating(mb);
+        }
     }
 }

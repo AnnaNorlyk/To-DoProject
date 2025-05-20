@@ -67,6 +67,7 @@ jobs:
             -reports:"TestResults/**/coverage.cobertura.xml" \
             -targetdir:"coverage-report" \
             -reporttypes:"Html;SonarQube"
+
       - name: Mutation Testing
         run: |
             dotnet stryker \
