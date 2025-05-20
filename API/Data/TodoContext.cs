@@ -1,5 +1,6 @@
+using System;
 using Microsoft.EntityFrameworkCore;
-using API.Models;    
+using API.Models;
 
 namespace API.Data;
 
@@ -7,8 +8,8 @@ public class TodoContext : DbContext
 {
     public TodoContext(DbContextOptions<TodoContext> opts) : base(opts) { }
 
-    public DbSet<TodoList> TodoLists { get; set; }
-    public DbSet<Todo> Todos { get; set; }
+    public DbSet<TodoList> TodoLists { get; set; } = null!;
+    public DbSet<Todo> Todos { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder mb)
     {
