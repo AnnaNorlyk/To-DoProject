@@ -1,6 +1,6 @@
 
-namespace API.Models
-{
+namespace API.Models;
+
     public class Todo
     {
         public int Id { get; set; }
@@ -9,4 +9,3 @@ namespace API.Models
         public int TodoListId { get; set; }
         public TodoList? List { get; set; }
     }
-}

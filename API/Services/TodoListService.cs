@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 
 namespace API.Services;
-{
+
     public class TodoListService : ITodoListService
     {
         private readonly TodoContext _ctx;
@@ -60,4 +60,3 @@ namespace API.Services;
                       .OrderBy(t => t.Id)
                       .ToListAsync();
     }
-}
