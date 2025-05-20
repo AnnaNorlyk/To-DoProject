@@ -55,7 +55,7 @@ jobs:
 
       - name: Build & Test
         run: |
-            dotnet build API/API.csproj
+            dotnet build 
             dotnet test API.Tests/API.Tests.csproj \
             --no-build \
             --collect:"XPlat Code Coverage" \
