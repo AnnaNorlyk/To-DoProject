@@ -53,12 +53,14 @@ jobs:
             /d:sonar.qualitygate.wait=true \
             /d:sonar.coverageReportPaths="coverage-report/SonarQube.xml"
 
-      - name: Build & Test Backend
+      - name: Build & Test
         run: |
-          dotnet build API/API.csproj
-          dotnet test  API/API.csproj \
+            dotnet build API/API.csproj
+            dotnet test API.Tests/API.Tests.csproj \
+            --no-build \
             --collect:"XPlat Code Coverage" \
             --results-directory TestResults
+
 
       - name: Generate Coverage Reports
         run: |
