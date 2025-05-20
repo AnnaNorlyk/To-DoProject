@@ -61,27 +61,19 @@ jobs:
             --collect:"XPlat Code Coverage" \
             --results-directory TestResults
 
-
-      - name: Debug - list TestResults
-        run: |
-          echo "=== Contents of TestResults ==="
-          ls -R TestResults || true
-        
-
-
       - name: Generate Coverage Reports
         run: |
           reportgenerator \
             -reports:"TestResults/**/coverage.cobertura.xml" \
             -targetdir:"coverage-report" \
             -reporttypes:"Html;SonarQube"
-
       - name: Mutation Testing
         run: |
-          dotnet stryker \
-            --project-file API/API.csproj \
-            --mutate "API/**/*.cs" \
+            dotnet stryker \
+            --project API/API.csproj \
+             --test-project API.Tests/API.Tests.csproj \
             --break-at 80
+
 
       - name: Sonar End
         run: |
