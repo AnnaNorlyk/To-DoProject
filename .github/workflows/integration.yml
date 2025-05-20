@@ -55,11 +55,12 @@ jobs:
 
       - name: Build & Test
         run: |
-            dotnet build 
-            dotnet test API.Tests/API.Tests.csproj \
-            --no-build \
+          dotnet build API/API.csproj -c Release
+          dotnet build API.Tests/API.Tests.csproj -c Release
+          dotnet test  API.Tests/API.Tests.csproj \
             --collect:"XPlat Code Coverage" \
             --results-directory TestResults
+
 
       - name: Debug - list TestResults
         run: |
