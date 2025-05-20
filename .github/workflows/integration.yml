@@ -61,6 +61,12 @@ jobs:
             --collect:"XPlat Code Coverage" \
             --results-directory TestResults
 
+      - name: Debug - list TestResults
+        run: |
+          echo "=== Contents of TestResults ==="
+          ls -R TestResults || true
+        
+
 
       - name: Generate Coverage Reports
         run: |
