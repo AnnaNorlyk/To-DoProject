@@ -50,6 +50,7 @@ jobs:
             /k:"${{ vars.SONAR_PROJECT_KEY }}" \
             /d:sonar.host.url="${{ vars.SONAR_HOST }}" \
             /d:sonar.login="${{ vars.SONAR_TOKEN }}" \
+            /d:sonar.branch.name="${{ github.ref_name }}" \
             /d:sonar.qualitygate.wait=true \
             /d:sonar.coverageReportPaths="coverage-report/SonarQube.xml"
 
@@ -70,15 +71,13 @@ jobs:
 
       - name: Mutation Testing
         run: |
-            dotnet stryker \
+          dotnet stryker \
             --project API/API.csproj \
-             --test-project API.Tests/API.Tests.csproj \
+            --test-project API.Tests/API.Tests.csproj \
             --break-at 80
 
-
       - name: Sonar End
-        continue-on-error: true
-        run: | 
+        run: |
           dotnet sonarscanner end \
             /d:sonar.login="${{ vars.SONAR_TOKEN }}"
 
