@@ -21,6 +21,103 @@ namespace API.Tests
         }
 
         [Fact]
+        public async Task GetAllListsAsync_OnEmptyDb_ReturnsEmpty()
+        {
+            // Arrange
+            var svc = CreateService(Guid.NewGuid().ToString());
+
+            // Act
+            var all = await svc.GetAllListsAsync();
+
+            // Assert
+            Assert.Empty(all);
+        }
+
+        [Fact]
+        public async Task GetTodosAsync_OnEmptyList_ReturnsEmpty()
+        {
+            // Arrange
+            var svc = CreateService(Guid.NewGuid().ToString());
+            var list = await svc.AddListAsync("Whatever");
+
+            // Act
+            var todos = await svc.GetTodosAsync(list.Id);
+
+            // Assert
+            Assert.Empty(todos);
+        }
+
+        [Fact]
+        public async Task DeleteListAsync_InvalidId_ReturnsFalse()
+        {
+            // Arrange
+            var svc = CreateService(Guid.NewGuid().ToString());
+
+            // Act
+            var result = await svc.DeleteListAsync(1234);
+
+            // Assert
+            Assert.False(result);
+        }
+
+        [Fact]
+        public async Task UpdateTodoAsync_InvalidId_ReturnsNull()
+        {
+            // Arrange
+            var svc = CreateService(Guid.NewGuid().ToString());
+
+            // Act
+            var updated = await svc.UpdateTodoAsync(999, "nope");
+
+            // Assert
+            Assert.Null(updated);
+        }
+
+        [Fact]
+        public async Task DeleteTodoAsync_InvalidId_ReturnsFalse()
+        {
+            // Arrange
+            var svc = CreateService(Guid.NewGuid().ToString());
+
+            // Act
+            var deleted = await svc.DeleteTodoAsync(999);
+
+            // Assert
+            Assert.False(deleted);
+        }
+
+        [Fact]
+        public async Task GetAllListsAsync_ReturnsLists_InIdOrder()
+        {
+            // Arrange
+            var svc = CreateService(Guid.NewGuid().ToString());
+            var l1 = await svc.AddListAsync("First");
+            var l2 = await svc.AddListAsync("Second");
+
+            // Act
+            var all = await svc.GetAllListsAsync();
+
+            // Assert
+            Assert.Equal(new[] { l1.Id, l2.Id }, all.Select(x => x.Id));
+        }
+
+        [Fact]
+        public async Task GetTodosAsync_ReturnsTodos_InIdOrder()
+        {
+            // Arrange
+            var svc = CreateService(Guid.NewGuid().ToString());
+            var list = await svc.AddListAsync("L");
+            var t1 = await svc.AddTodoAsync(list.Id, "one");
+            var t2 = await svc.AddTodoAsync(list.Id, "two");
+
+            // Act
+            var todos = await svc.GetTodosAsync(list.Id);
+
+            // Assert
+            Assert.Equal(new[] { t1.Id, t2.Id }, todos.Select(x => x.Id));
+        }
+
+        [Fact]
         public async Task AddListAsync_Should_Create_New_List()
         {
             // Arrange
@@ -32,7 +129,6 @@ namespace API.Tests
             // Assert
             Assert.NotNull(list);
             Assert.Equal("Shopping", list.Name);
-
             var all = await svc.GetAllListsAsync();
             Assert.Single(all);
             Assert.Equal(list.Id, all[0].Id);
@@ -44,7 +140,7 @@ namespace API.Tests
             // Arrange
             var svc = CreateService(Guid.NewGuid().ToString());
             var list = await svc.AddListAsync("Work");
-            await svc.AddTodoAsync(list.Id, "Email client");
+            await svc.AddTodoAsync(list.Id, "Email");
 
             // Act
             var result = await svc.DeleteListAsync(list.Id);
@@ -68,7 +164,6 @@ namespace API.Tests
             // Assert
             Assert.NotNull(todo);
             Assert.Equal(list.Id, todo.TodoListId);
-
             var todos = await svc.GetTodosAsync(list.Id);
             Assert.Single(todos);
             Assert.Equal(todo.Id, todos[0].Id);
@@ -80,17 +175,16 @@ namespace API.Tests
             // Arrange
             var svc = CreateService(Guid.NewGuid().ToString());
             var list = await svc.AddListAsync("Reading");
-            var todo = await svc.AddTodoAsync(list.Id, "Old title");
+            var todo = await svc.AddTodoAsync(list.Id, "Old");
 
             // Act
-            var updated = await svc.UpdateTodoAsync(todo.Id, "New title");
+            var updated = await svc.UpdateTodoAsync(todo.Id, "New");
 
             // Assert
             Assert.NotNull(updated);
-            Assert.Equal("New title", updated.Text);
-
+            Assert.Equal("New", updated.Text);
             var fetched = (await svc.GetTodosAsync(list.Id)).First();
-            Assert.Equal("New title", fetched.Text);
+            Assert.Equal("New", fetched.Text);
         }
 
         [Fact]
@@ -99,18 +193,17 @@ namespace API.Tests
             // Arrange
             var svc = CreateService(Guid.NewGuid().ToString());
             var list = await svc.AddListAsync("Chores");
-            var todo1 = await svc.AddTodoAsync(list.Id, "Clean");
-            var todo2 = await svc.AddTodoAsync(list.Id, "Cook");
+            var t1 = await svc.AddTodoAsync(list.Id, "Clean");
+            var t2 = await svc.AddTodoAsync(list.Id, "Cook");
 
             // Act
-            var deleted = await svc.DeleteTodoAsync(todo1.Id);
+            var deleted = await svc.DeleteTodoAsync(t1.Id);
 
             // Assert
             Assert.True(deleted);
-
             var todos = await svc.GetTodosAsync(list.Id);
             Assert.Single(todos);
-            Assert.Equal(todo2.Id, todos[0].Id);
+            Assert.Equal(t2.Id, todos[0].Id);
         }
     }
 }
