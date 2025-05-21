@@ -50,7 +50,6 @@ jobs:
             /k:"${{ vars.SONAR_PROJECT_KEY }}" \
             /d:sonar.host.url="${{ vars.SONAR_HOST }}" \
             /d:sonar.login="${{ vars.SONAR_TOKEN }}" \
-            /d:sonar.branch.name="${{ github.ref_name }}" \
             /d:sonar.qualitygate.wait=true \
             /d:sonar.coverageReportPaths="coverage-report/SonarQube.xml"
 
