@@ -73,19 +73,20 @@ jobs:
 
       - name: Mutation Testing
         run: |
-          dotnet stryker \
+            dotnet stryker \
             --project API/API.csproj \
             --test-project API.Tests/API.Tests.csproj \
-            --mutate "!**/ToDo.cs" \      #Model class 
-            --mutate "!**/ToDoList.cs" \  #Also model class
-            --mutate "!**/Program.cs" \   #Program.cs 
+            --mutate "!**/ToDo.cs" \
+            --mutate "!**/ToDoList.cs" \
+            --mutate "!**/Program.cs" \
             --break-at 80
+
 
       - name: Sonar End
         if: always()
         run: |
           dotnet sonarscanner end \
-            /d:sonar.login="${{ vars.SONAR_TOKEN }}"
+            /d:sonar.token="${{ vars.SONAR_TOKEN }}" \  
 
       - name: Upload Coverage
         if: always()
