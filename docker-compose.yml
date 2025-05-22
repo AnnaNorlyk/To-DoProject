@@ -50,7 +50,7 @@ services:
       mariadb:
         condition: service_healthy
     volumes:
-      - ./db/migrations:/flyway/sql
+      - ./db/migration:/flyway/sql
     command: migrate
     environment:
       FLYWAY_URL: jdbc:mariadb://mariadb:3306/${MYSQL_DATABASE}
