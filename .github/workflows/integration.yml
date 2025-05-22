@@ -85,8 +85,8 @@ jobs:
       - name: Sonar End
         if: always()
         run: |
-          dotnet sonarscanner end \
-            /d:sonar.token="${{ vars.SONAR_TOKEN }}" \  
+           dotnet sonarscanner end /d:sonar.token="${{ vars.SONAR_TOKEN }}"
+
 
       - name: Upload Coverage
         if: always()
