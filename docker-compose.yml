@@ -66,3 +66,7 @@ services:
       - "3000:80"
     environment:
       REACT_APP_BASE_URL: "http://backend"
+
+
+volumes:
+  seq-data:  
