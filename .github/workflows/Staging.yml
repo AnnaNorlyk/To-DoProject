@@ -51,7 +51,7 @@ jobs:
           host:     ${{ vars.STAGING_SERVER_IP }}
           username: ${{ vars.STAGING_SERVER_USERNAME }}
           key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
-          source:   db/migrations/*
+          source:   db/migration/*
           target:   todo-app/db/migration/
 
       - name: Create .env on staging
