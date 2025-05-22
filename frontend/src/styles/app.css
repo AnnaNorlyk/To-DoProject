@@ -1,0 +1,99 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+:root {
+    --bg: #f7f4eb; /* cream background */
+    --accent: #9caf88; /* sage green */
+    --text: #333;
+}
+
+body, html, #root {
+    height: 100%;
+    margin: 0;
+    font-family: sans-serif;
+    background: var(--bg);
+}
+
+.app-container {
+    padding: 1rem;
+    text-align: center;
+}
+
+.add-list-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    margin-bottom: 1rem;
+}
+
+.lists-container {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.list-card {
+    background: white;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    width: 280px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.delete-list-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.25rem;
+    color: var(--accent);
+    cursor: pointer;
+}
+
+.input-group input {
+    min-width: 0;
+    width: 100%;
+    padding: 0.5rem;
+    border: 2px solid var(--accent);
+    border-radius: 999px;
+    outline: none;
+    white-space: nowrap; 
+    overflow-x: auto; 
+}
+
+.todo-list {
+    list-style: none;
+    padding: 0;
+    margin: 0.75rem 0 0;
+}
+
+.todo-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg);
+    margin-bottom: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    overflow-wrap: break-word;
+}
+
+.delete-todo-btn {
+    background: transparent;
+    border: none;
+    color: #c44;
+    cursor: pointer;
+}
+
