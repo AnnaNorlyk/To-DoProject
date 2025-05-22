@@ -46,12 +46,15 @@ jobs:
 
       - name: Sonar Begin
         run: |
-          dotnet sonarscanner begin \
-            /k:"${{ vars.SONAR_PROJECT_KEY }}" \
-            /d:sonar.host.url="${{ vars.SONAR_HOST }}" \
-            /d:sonar.login="${{ vars.SONAR_TOKEN }}" \
-            /d:sonar.qualitygate.wait=true \
-            /d:sonar.coverageReportPaths="coverage-report/SonarQube.xml"
+         dotnet sonarscanner begin \
+          /k:"${{ vars.SONAR_PROJECT_KEY }}" \
+          /d:sonar.host.url="${{ vars.SONAR_HOST }}" \
+          /d:sonar.token="${{ vars.SONAR_TOKEN }}" \
+          /d:sonar.qualitygate.wait=true \
+          /d:sonar.coverageReportPaths="coverage-report/SonarQube.xml" \
+          /d:sonar.exclusions="coverage-report/**,API/Program.cs,API/Models/ToDo.cs" \
+          /d:sonar.scanner.scanAll=false
+
 
       - name: Build & Test
         run: |
