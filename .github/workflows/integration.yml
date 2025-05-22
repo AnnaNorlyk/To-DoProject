@@ -76,6 +76,9 @@ jobs:
           dotnet stryker \
             --project API/API.csproj \
             --test-project API.Tests/API.Tests.csproj \
+            --mutate "!**/ToDo.cs" \      #Model class 
+            --mutate "!**/ToDoList.cs" \  #Also model class
+            --mutate "!**/Program.cs" \   #Program.cs 
             --break-at 80
 
       - name: Sonar End
