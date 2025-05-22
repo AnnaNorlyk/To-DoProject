@@ -1,6 +1,16 @@
 version: "3.8"
 
 services:
+
+  seq:
+    image: datalust/seq:2025.1
+    container_name: seq
+    environment:
+      - ACCEPT_EULA=Y                 
+    volumes:
+      - seq-data:/data                
+    ports:
+      - "5341:80"                     
   mariadb:
     image: mariadb:latest
     restart: always
