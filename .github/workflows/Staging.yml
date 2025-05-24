@@ -13,20 +13,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Debug workspace layout
-        run: |
-          echo "PWD = $(pwd)"
-          echo
-          echo "— top-level files —"
-          ls -1
-          echo
-          echo "— show db folder if present —"
-          ls -R db || echo "(no db folder)"
-          echo
-          echo "— show migrations folder if present —"
-          ls -R db/migration || echo "(no db/migration)"
-          ls -R db/migrations || echo "(no db/migrations)"
-
       - name: Login to GHCR
         run: |
           echo "${{ secrets.CR_PAT }}" \
@@ -41,17 +27,19 @@ jobs:
           docker build -t ghcr.io/${NS}/todo-frontend:staging -f frontend/Dockerfile frontend
           docker push  ghcr.io/${NS}/todo-frontend:staging
 
-      - name: Copy compose & migrations
+      - name: Copy compose file & Flyway SQL to server
         uses: appleboy/scp-action@v0.1.7
         with:
-          host:      ${{ vars.STAGING_SERVER_IP }}
-          username:  ${{ vars.STAGING_SERVER_USERNAME }}
-          key:       ${{ secrets.STAGING_SERVER_SSH_KEY }}
-          source: |
-            docker-compose.yml
-            db/migration/*.sql
-          target:   todo-app/
-          overwrite: true
+            host:      ${{ vars.STAGING_SERVER_IP }}
+            username:  ${{ vars.STAGING_SERVER_USERNAME }}
+            key:       ${{ secrets.STAGING_SERVER_SSH_KEY }}
+            working-directory: To-DoProject       
+            source: |
+                docker-compose.yml
+                db/migration/*.sql
+            target:    todo-app/
+            overwrite: true
+
 
       - name: Create .env on server
         uses: appleboy/ssh-action@v1.2.1
