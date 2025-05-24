@@ -1,4 +1,4 @@
-name: Build and Deploy to Staging
+﻿name: Build and Deploy to Staging
 
 on:
   push:
@@ -12,6 +12,18 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+
+
+      - name: Debug CI workspace
+        run: |
+            echo "PWD: $(pwd)"
+            echo "Contents of workspace:"
+            ls -R .
+            echo "----"
+            echo "Looking for migrations:"
+            ls -R db/migration || echo "(no db/migration)"
+            ls -R db/migrations|| echo "(no db/migrations)"
+
 
       - name: Login to GHCR
         run: |
