@@ -19,13 +19,14 @@ jobs:
 
       - name: Build & push Docker images
         run: |
-          NS="${{ github.repository_owner,, }}"
+            NS=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
 
-          docker build -t ghcr.io/${NS}/todo-backend:staging -f API/Dockerfile .
-          docker push ghcr.io/${NS}/todo-backend:staging
+            docker build -t ghcr.io/${NS}/todo-backend:staging -f API/Dockerfile .
+            docker push  ghcr.io/${NS}/todo-backend:staging
 
-          docker build -t ghcr.io/${NS}/todo-frontend:staging -f frontend/Dockerfile frontend
-          docker push ghcr.io/${NS}/todo-frontend:staging
+            docker build -t ghcr.io/${NS}/todo-frontend:staging -f frontend/Dockerfile frontend
+            docker push  ghcr.io/${NS}/todo-frontend:staging
+
 
       - name: Copy compose file & Flyway SQL to server
         uses: appleboy/scp-action@v0.1.7
