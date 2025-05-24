@@ -14,19 +14,16 @@ jobs:
 
       - name: Login to GitHub Container Registry
         run: |
-          echo "${{ secrets.CR_PAT }}" \
-            | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Build & push Docker images
         run: |
-            NS=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-
-            docker build -t ghcr.io/${NS}/todo-backend:staging -f API/Dockerfile .
-            docker push  ghcr.io/${NS}/todo-backend:staging
-
-            docker build -t ghcr.io/${NS}/todo-frontend:staging -f frontend/Dockerfile frontend
-            docker push  ghcr.io/${NS}/todo-frontend:staging
-
+          NS="${{ github.repository_owner }}"
+          NS="${NS,,}"
+          docker build -t ghcr.io/${NS}/todo-backend:staging -f API/Dockerfile .
+          docker push ghcr.io/${NS}/todo-backend:staging
+          docker build -t ghcr.io/${NS}/todo-frontend:staging -f frontend/Dockerfile frontend
+          docker push ghcr.io/${NS}/todo-frontend:staging
 
       - name: Copy compose file & Flyway SQL to server
         uses: appleboy/scp-action@v0.1.7
@@ -38,7 +35,6 @@ jobs:
             docker-compose.yml
             db/migration/*.sql
           target:   todo-app/
-          strip_components: 0
           overwrite: true
 
       - name: Create .env on server
@@ -59,12 +55,11 @@ jobs:
       - name: Deploy stack
         uses: appleboy/ssh-action@v0.1.10
         with:
-          host:     ${{ vars.STAGING_SERVER_IP }}
-          username: ${{ vars.STAGING_SERVER_USERNAME }}
-          key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
+          host:            ${{ vars.STAGING_SERVER_IP }}
+          username:        ${{ vars.STAGING_SERVER_USERNAME }}
+          key:             ${{ secrets.STAGING_SERVER_SSH_KEY }}
           command_timeout: 1200
           script: |
             cd ~/todo-app
             docker compose pull
             docker compose up -d
-
