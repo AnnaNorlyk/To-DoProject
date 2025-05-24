@@ -2,7 +2,8 @@ name: Build and Deploy to Staging
 
 on:
   push:
-    branches: [ master ]
+    branches: 
+    - master
 
 jobs:
   build-and-deploy:
@@ -12,25 +13,26 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Login to GitHub Container Registry
+      - name: Login to GHCR
         run: |
-          echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          echo "${{ secrets.CR_PAT }}" \
+            | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Build & push Docker images
         run: |
           NS="${{ github.repository_owner }}"
           NS="${NS,,}"
           docker build -t ghcr.io/${NS}/todo-backend:staging -f API/Dockerfile .
-          docker push ghcr.io/${NS}/todo-backend:staging
+          docker push  ghcr.io/${NS}/todo-backend:staging
           docker build -t ghcr.io/${NS}/todo-frontend:staging -f frontend/Dockerfile frontend
-          docker push ghcr.io/${NS}/todo-frontend:staging
+          docker push  ghcr.io/${NS}/todo-frontend:staging
 
-      - name: Copy compose file & Flyway SQL to server
+      - name: Copy compose & migrations
         uses: appleboy/scp-action@v0.1.7
         with:
-          host:     ${{ vars.STAGING_SERVER_IP }}
-          username: ${{ vars.STAGING_SERVER_USERNAME }}
-          key:      ${{ secrets.STAGING_SERVER_SSH_KEY }}
+          host:      ${{ vars.STAGING_SERVER_IP }}
+          username:  ${{ vars.STAGING_SERVER_USERNAME }}
+          key:       ${{ secrets.STAGING_SERVER_SSH_KEY }}
           source: |
             docker-compose.yml
             db/migration/*.sql
