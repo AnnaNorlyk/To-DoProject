@@ -13,6 +13,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Debug workspace layout
+        run: |
+          echo "PWD = $(pwd)"
+          echo
+          echo "— top-level files —"
+          ls -1
+          echo
+          echo "— show db folder if present —"
+          ls -R db || echo "(no db folder)"
+          echo
+          echo "— show migrations folder if present —"
+          ls -R db/migration || echo "(no db/migration)"
+          ls -R db/migrations || echo "(no db/migrations)"
+
       - name: Login to GHCR
         run: |
           echo "${{ secrets.CR_PAT }}" \
