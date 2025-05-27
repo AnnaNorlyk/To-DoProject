@@ -10,7 +10,7 @@ async function json<T>(response: Response): Promise<T> {
 }
 
 if (!API_BASE) {
-    throw new Error("VITE_API_BASE is not defined. Please set it in your .env file.");
+    throw new Error("VITE_API_BASE is not defined. Please set it in .env file.");
 }
 
 export const api = {
@@ -24,8 +24,11 @@ export const api = {
             body: JSON.stringify(name),
         }).then(json<TodoList>),
 
-    deleteList: (id: number) =>
-        fetch(`${API_BASE}/lists/${id}`, { method: 'DELETE' }).then(() => { }),
+    deleteList: async (id: number): Promise<boolean> => {
+        const res = await fetch(`${API_BASE}/lists/${id}`, { method: 'DELETE' });
+        return res.status === 204;
+    },
+
 
     addTodo: (listId: number, text: string): Promise<Todo> =>
         fetch(`${API_BASE}/lists/${listId}/todos`, {

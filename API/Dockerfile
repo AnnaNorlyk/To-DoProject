@@ -1,7 +1,7 @@
 # Base runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
 ARG APP_UID=1000
-RUN adduser --uid $APP_UID --disabled-password appuser
+RUN adduser --uid "$APP_UID" --disabled-password appuser
 USER appuser
 WORKDIR /app
 EXPOSE 8080
@@ -20,14 +20,14 @@ RUN dotnet restore "API/API.csproj"
 # Copy the rest of the code and build
 COPY . .
 WORKDIR "/src/API"
-RUN dotnet build "API.csproj" --configuration $BUILD_CONFIGURATION --output /app/build
+RUN dotnet build "API.csproj" --configuration "$BUILD_CONFIGURATION" --output /app/build
 
 # Publish stage
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
 WORKDIR "/src/API"
 RUN dotnet publish "API.csproj" \
-    --configuration $BUILD_CONFIGURATION \
+    --configuration "$BUILD_CONFIGURATION" \
     --output /app/publish \
     /p:UseAppHost=false
 

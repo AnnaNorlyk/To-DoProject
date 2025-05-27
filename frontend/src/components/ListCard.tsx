@@ -26,13 +26,18 @@ export default function ListCard({
                 <button
                     className="delete-list-btn"
                     onClick={async () => {
-                        await api.deleteList(list.id);
-                        onDeleted();
+                        const success = await api.deleteList(list.id);
+                        if (success) {
+                            onDeleted();
+                        } else {
+                            alert("List deletion is currently disabled.");
+                        }
                     }}
                     title="Delete list"
                 >
                     ×
                 </button>
+
             </div>
 
             <div className="input-group">
