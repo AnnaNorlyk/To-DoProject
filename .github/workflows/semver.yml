@@ -1,0 +1,65 @@
+name: SemVer
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  delivery:
+    runs-on: ubuntu-latest
+    steps:
+      # Check out full history 
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Bump version according to commit history
+      - name: Determine Semantic Version
+        id: semver_app
+        uses: paulhatch/semantic-version@v5.4.0
+        with:
+          bump_each_commit: true
+
+      # Push new tag so following runs see the updated version
+      - name: Push updated tag
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag "v${{ steps.semver_app.outputs.version }}"
+          git push origin "v${{ steps.semver_app.outputs.version }}"
+
+      # Log in to GitHub Container Registry (GHCR)
+      - name: Log in to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.CR_PAT }}
+
+      # Convert repository name to lowercase
+      - name: Convert Repository Name to Lowercase
+        id: repo_name
+        run: echo "REPO_NAME=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+
+      # Build and push the frontend Docker image
+      - name: Build and Push Frontend image
+        run: |
+          docker build \
+            -t ghcr.io/${{ env.REPO_NAME }}/to-doproject:staging \
+            -t ghcr.io/${{ env.REPO_NAME }}/to-doproject:${{ steps.semver_app.outputs.version }} \
+            -f ./frontend/Dockerfile \
+            ./frontend
+          docker push ghcr.io/${{ env.REPO_NAME }}/to-doproject:staging
+          docker push ghcr.io/${{ env.REPO_NAME }}/to-doproject:${{ steps.semver_app.outputs.version }}
+
+      # Create or update a GitHub Release with generated notes
+      - name: Create Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: v${{ steps.semver_app.outputs.version }}
+          generateReleaseNotes: true
+          body: |
+            This release publishes the To-DoProject frontend image:
+            ghcr.io/${{ env.REPO_NAME }}/to-doproject:${{ steps.semver_app.outputs.version }}

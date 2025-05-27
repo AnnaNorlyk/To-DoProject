@@ -1,0 +1,16 @@
+CREATE TABLE todolists (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE todos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    text VARCHAR(255) NOT NULL,
+    created TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    todo_list_id INT NOT NULL,
+    CONSTRAINT fk_todos_todolists
+        FOREIGN KEY (todo_list_id)
+        REFERENCES todolists(id)
+        ON DELETE CASCADE
+);

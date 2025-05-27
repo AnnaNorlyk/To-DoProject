@@ -1,0 +1,105 @@
+name: Integration and Analysis
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install .NET tools
+        run: |
+          dotnet tool install -g dotnet-sonarscanner
+          dotnet tool install -g dotnet-reportgenerator-globaltool
+          dotnet tool install -g dotnet-stryker
+
+      - name: Configure .env
+        run: |
+          echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> .env
+          echo "MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}"       >> .env
+          echo "MYSQL_USER=${{ secrets.MYSQL_USER }}"               >> .env
+          echo "MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}"       >> .env
+
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.CR_PAT }}" \
+            | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Start Docker Compose
+        run: docker compose up -d mariadb flyway backend
+        env:
+          MYSQL_ROOT_PASSWORD: ${{ secrets.MYSQL_ROOT_PASSWORD }}
+          MYSQL_DATABASE:      ${{ secrets.MYSQL_DATABASE }}
+          MYSQL_USER:          ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD:      ${{ secrets.MYSQL_PASSWORD }}
+
+      - name: Wait for DB
+        run: sleep 10
+
+      - name: Sonar Begin
+        run: |
+            dotnet sonarscanner begin \
+                /k:"${{ vars.SONAR_PROJECT_KEY }}" \
+                /d:sonar.host.url="${{ vars.SONAR_HOST }}" \
+                /d:sonar.token="${{ vars.SONAR_TOKEN }}" \
+                /d:sonar.qualitygate.wait=true \
+                /d:sonar.coverageReportPaths="coverage-report/SonarQube/SonarQube.xml" \
+                 /d:sonar.exclusions="coverage-report/**,API/Program.cs,API/Models/ToDo.cs" \
+                /d:sonar.scanner.scanAll=false
+
+
+
+      - name: Build & Test
+        run: |
+          dotnet build API/API.csproj -c Release
+          dotnet build API.Tests/API.Tests.csproj -c Release
+          dotnet test  API.Tests/API.Tests.csproj \
+            --collect:"XPlat Code Coverage" \
+            --results-directory TestResults
+
+      - name: Generate Coverage Reports
+        run: |
+            reportgenerator \
+            -reports:"TestResults/**/coverage.cobertura.xml" \
+                -targetdir:"coverage-report/SonarQube" \
+                -reporttypes:"Html;SonarQube"
+
+
+      - name: Mutation Testing
+        run: |
+            dotnet stryker \
+            --project API/API.csproj \
+            --test-project API.Tests/API.Tests.csproj \
+            --mutate "!**/ToDo.cs" \
+            --mutate "!**/ToDoList.cs" \
+            --mutate "!**/Program.cs" \
+            --break-at 80
+
+
+      - name: Sonar End
+        if: always()
+        run: |
+           dotnet sonarscanner end /d:sonar.token="${{ vars.SONAR_TOKEN }}"
+
+
+      - name: Upload Coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Coverage
+          path: coverage-report
+
+      - name: Upload Stryker Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: StrykerReport
+          path: StrykerOutput

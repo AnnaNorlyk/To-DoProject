@@ -1,0 +1,80 @@
+services:
+
+  seq:
+    image: datalust/seq:2025.1
+    container_name: seq
+    environment:
+      - ACCEPT_EULA=Y                 
+    volumes:
+      - seq-data:/data                
+    ports:
+      - "5341:80"                     
+
+  mariadb:
+    image: mariadb:latest
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+      MYSQL_DATABASE:      "${MYSQL_DATABASE}"
+      MYSQL_USER:          "${MYSQL_USER}"
+      MYSQL_PASSWORD:      "${MYSQL_PASSWORD}"
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "sh", "-c", "mariadb --host=localhost --user=root --password=$MYSQL_ROOT_PASSWORD --execute='SELECT 1'"]
+      start_period: 30s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+
+
+  backend:
+    image: ghcr.io/annanorlyk/todo-backend:staging
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    ports:
+      - "5000:80"
+    env_file:
+    - .env 
+    environment:
+      ASPNETCORE_URLS: "http://+:80"
+      ASPNETCORE_ENVIRONMENT: "Development"
+      MYSQL_HOST: "mariadb"
+      MYSQL_DATABASE: "${MYSQL_DATABASE}"
+      MYSQL_USER: "${MYSQL_USER}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
+
+
+  flyway:
+    image: flyway/flyway:latest
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    volumes:
+      - ./db/migration:/flyway/sql
+    command: migrate
+    environment:
+      FLYWAY_URL: jdbc:mariadb://mariadb:3306/${MYSQL_DATABASE}
+      FLYWAY_USER: ${MYSQL_USER}
+      FLYWAY_PASSWORD: ${MYSQL_PASSWORD}
+
+  frontend:
+    image: ghcr.io/annanorlyk/todo-frontend:staging
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "3000:80"
+
+  featurehub:
+    image: featurehub/party-server:latest
+    restart: always
+    volumes:
+      - featurehub-h2-data:/db
+    ports:
+      - "8085:8085"
+volumes:
+  seq-data:  
+  featurehub-h2-data:  
