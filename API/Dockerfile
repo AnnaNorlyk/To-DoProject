@@ -12,13 +12,16 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
-# Copy csproj first, restore dependencies
+# Copy csproj files and restore dependencies (cached until csproj changes)
 COPY ["API/API.csproj", "API/"]
 COPY ["Monitoring/Monitoring.csproj", "Monitoring/"]
-RUN dotnet restore "API/API.csproj"
+RUN --mount=type=cache,target=/root/.nuget \
+    dotnet restore "API/API.csproj"
 
-# Copy the rest of the code and build
-COPY . .
+# Copy only source folders
+COPY ["API/", "API/"]
+COPY ["Monitoring/", "Monitoring/"]
+
 WORKDIR "/src/API"
 RUN dotnet build "API.csproj" --configuration "$BUILD_CONFIGURATION" --output /app/build
 

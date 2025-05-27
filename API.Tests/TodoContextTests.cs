@@ -8,9 +8,9 @@ namespace API.Tests
 {
     public class TodoContextModelTests
     {
-        // Ensures: the FK from Todo to TodoList uses cascade delete
+        // check cascade delete behavior on TodoList -> Todo relationship
         [Fact]
-        public void Cascade()
+        public void CascadeDeleteBehavior_IsCascade()
         {
             // Arrange
             var options = new DbContextOptionsBuilder<TodoContext>()
@@ -19,18 +19,19 @@ namespace API.Tests
 
             // Act
             using var ctx = new TodoContext(options);
-            var rel = ctx.Model
+            var cascadeBehavior = ctx.Model
                 .FindEntityType(typeof(Todo))!
                 .GetForeignKeys()
-                .First(fk => fk.PrincipalEntityType.ClrType == typeof(TodoList));
+                .First(fk => fk.PrincipalEntityType.ClrType == typeof(TodoList))
+                .DeleteBehavior;
 
             // Assert
-            Assert.Equal(DeleteBehavior.Cascade, rel.DeleteBehavior);
+            Assert.Equal(DeleteBehavior.Cascade, cascadeBehavior);
         }
 
-        // Ensures: TodoList maps to "todolists" table
+        // check TodoList entity maps to "todolists" table
         [Fact]
-        public void ListTable()
+        public void TodoList_TableName_IsTodolists()
         {
             // Arrange
             var options = new DbContextOptionsBuilder<TodoContext>()
@@ -39,15 +40,16 @@ namespace API.Tests
 
             // Act
             using var ctx = new TodoContext(options);
-            var table = ctx.Model.FindEntityType(typeof(TodoList))?.GetTableName();
+            var tableName = ctx.Model.FindEntityType(typeof(TodoList))?
+                .GetTableName();
 
             // Assert
-            Assert.Equal("todolists", table);
+            Assert.Equal("todolists", tableName);
         }
 
-        // Ensures: Todo maps to "todos" table
+        // check Todo entity maps to "todos" table
         [Fact]
-        public void TodoTable()
+        public void Todo_TableName_IsTodos()
         {
             // Arrange
             var options = new DbContextOptionsBuilder<TodoContext>()
@@ -56,10 +58,55 @@ namespace API.Tests
 
             // Act
             using var ctx = new TodoContext(options);
-            var table = ctx.Model.FindEntityType(typeof(Todo))?.GetTableName();
+            var tableName = ctx.Model.FindEntityType(typeof(Todo))?
+                .GetTableName();
 
             // Assert
-            Assert.Equal("todos", table);
+            Assert.Equal("todos", tableName);
+        }
+
+        // check foreign key property is named "TodoListId"
+        [Fact]
+        public void ForeignKeyProperty_IsTodoListId()
+        {
+            // Arrange
+            var options = new DbContextOptionsBuilder<TodoContext>()
+                .UseInMemoryDatabase("FKTest")
+                .Options;
+
+            // Act
+            using var ctx = new TodoContext(options);
+            var fkProperty = ctx.Model
+                .FindEntityType(typeof(Todo))!
+                .GetForeignKeys()
+                .First(fk => fk.PrincipalEntityType.ClrType == typeof(TodoList))
+                .Properties
+                .First()
+                .Name;
+
+            // Assert
+            Assert.Equal("TodoListId", fkProperty);
+        }
+
+        // check navigation properties "List" on Todo and "Todos" on TodoList exist
+        [Fact]
+        public void NavigationProperties_Exist()
+        {
+            // Arrange
+            var options = new DbContextOptionsBuilder<TodoContext>()
+                .UseInMemoryDatabase("NavTest")
+                .Options;
+
+            // Act
+            using var ctx = new TodoContext(options);
+            var navNames = ctx.Model
+                .FindEntityType(typeof(Todo))!
+                .GetNavigations()
+                .Select(n => n.Name);
+
+            // Assert
+            Assert.Contains("List", navNames);
+            Assert.Contains("Todos", navNames);
         }
     }
 }

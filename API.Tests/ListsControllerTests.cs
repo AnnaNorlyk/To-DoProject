@@ -19,7 +19,7 @@ namespace API.Tests
             _ctrl = new ListsController(_svc.Object, _log.Object);
         }
 
-        // GET /lists should return 200 and the list of lists
+        // GetLists returns Ok
         [Fact]
         public async Task GetLists_ReturnsOk()
         {
@@ -35,20 +35,20 @@ namespace API.Tests
             Assert.Same(data, ok.Value);
         }
 
-        // POST /lists should reject empty names
+        // AddList null returns bad request
         [Fact]
-        public async Task AddList_InvalidName_ReturnsBadRequest()
+        public async Task AddList_Null_ReturnsBadRequest()
         {
             // Act
-            var result = await _ctrl.AddList("");
+            var result = await _ctrl.AddList(null);
 
             // Assert
             Assert.IsType<BadRequestObjectResult>(result.Result);
         }
 
-        // POST /lists should reject whitespace-only names
+        // AddList whitespace returns bad request
         [Fact]
-        public async Task AddList_WhitespaceName_ReturnsBadRequest()
+        public async Task AddList_Whitespace_ReturnsBadRequest()
         {
             // Act
             var result = await _ctrl.AddList("   ");
@@ -57,9 +57,9 @@ namespace API.Tests
             Assert.IsType<BadRequestObjectResult>(result.Result);
         }
 
-        // POST /lists should create and return the new list
+        // AddList valid returns created
         [Fact]
-        public async Task AddList_ValidName_ReturnsCreated()
+        public async Task AddList_Valid_ReturnsCreated()
         {
             // Arrange
             var dto = new TodoListDto { Id = 2, Name = "Groceries" };
@@ -71,11 +71,11 @@ namespace API.Tests
             // Assert
             var created = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
             Assert.Equal(nameof(_ctrl.GetLists), created.ActionName);
-            Assert.Equal(dto.Id, created.RouteValues["id"]);
+            Assert.Equal(dto.Id, (int)created.RouteValues!["id"]!);
             Assert.Equal(dto, created.Value);
         }
 
-        // DELETE /lists/{id} should return 204 when deletion succeeds
+        // DeleteList existing returns NoContent
         [Fact]
         public async Task DeleteList_Existing_ReturnsNoContent()
         {
@@ -86,7 +86,7 @@ namespace API.Tests
             Assert.IsType<NoContentResult>(await _ctrl.DeleteList(1));
         }
 
-        // DELETE /lists/{id} should return 404 when not found
+        // DeleteList missing returns NotFound
         [Fact]
         public async Task DeleteList_Missing_ReturnsNotFound()
         {
@@ -97,7 +97,7 @@ namespace API.Tests
             Assert.IsType<NotFoundResult>(await _ctrl.DeleteList(9));
         }
 
-        // GET /lists/{id}/todos should return 200 and the todos
+        // GetTodos returns Ok
         [Fact]
         public async Task GetTodos_ReturnsOk()
         {
@@ -113,20 +113,35 @@ namespace API.Tests
             Assert.Same(todos, ok.Value);
         }
 
-        // POST /lists/{id}/todos should reject empty text
+        // GetTodos null returns Ok
         [Fact]
-        public async Task AddTodo_InvalidText_ReturnsBadRequest()
+        public async Task GetTodos_Null_ReturnsOk()
+        {
+            // Arrange
+            _svc.Setup(s => s.GetTodosAsync(1)).ReturnsAsync((List<TodoDto>?)null);
+
+            // Act
+            var actionResult = await _ctrl.GetTodos(1);
+
+            // Assert
+            var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
+            Assert.Null(ok.Value);
+        }
+
+        // AddTodo null returns bad request
+        [Fact]
+        public async Task AddTodo_Null_ReturnsBadRequest()
         {
             // Act
-            var result = await _ctrl.AddTodo(1, "");
+            var result = await _ctrl.AddTodo(1, null);
 
             // Assert
             Assert.IsType<BadRequestObjectResult>(result.Result);
         }
 
-        // POST /lists/{id}/todos should reject whitespace-only text
+        // AddTodo whitespace returns bad request
         [Fact]
-        public async Task AddTodo_WhitespaceText_ReturnsBadRequest()
+        public async Task AddTodo_Whitespace_ReturnsBadRequest()
         {
             // Act
             var result = await _ctrl.AddTodo(1, "   ");
@@ -135,9 +150,9 @@ namespace API.Tests
             Assert.IsType<BadRequestObjectResult>(result.Result);
         }
 
-        // POST /lists/{id}/todos should create and return the todo
+        // AddTodo valid returns created
         [Fact]
-        public async Task AddTodo_ValidText_ReturnsCreated()
+        public async Task AddTodo_Valid_ReturnsCreated()
         {
             // Arrange
             var dto = new TodoDto { Id = 3, Text = "Walk dog" };
@@ -149,11 +164,11 @@ namespace API.Tests
             // Assert
             var created = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
             Assert.Equal(nameof(_ctrl.GetTodos), created.ActionName);
-            Assert.Equal(1, created.RouteValues["listId"]);
+            Assert.Equal(1, (int)created.RouteValues!["listId"]!);
             Assert.Equal(dto, created.Value);
         }
 
-        // PUT /api/todos/{id} should update and return todo if exists
+        // UpdateTodo existing returns Ok
         [Fact]
         public async Task UpdateTodo_Existing_ReturnsOk()
         {
@@ -169,18 +184,21 @@ namespace API.Tests
             Assert.Equal(dto, ok.Value);
         }
 
-        // PUT /api/todos/{id} should return 404 if todo not found
+        // UpdateTodo null returns NotFound
         [Fact]
-        public async Task UpdateTodo_Missing_ReturnsNotFound()
+        public async Task UpdateTodo_NullText_ReturnsNotFound()
         {
             // Arrange
-            _svc.Setup(s => s.UpdateTodoAsync(99, "Nope")).ReturnsAsync((TodoDto?)null);
+            _svc.Setup(s => s.UpdateTodoAsync(5, null)).ReturnsAsync((TodoDto?)null);
 
-            // Act & Assert
-            Assert.IsType<NotFoundResult>((await _ctrl.UpdateTodo(99, "Nope")).Result);
+            // Act
+            var result = await _ctrl.UpdateTodo(5, null);
+
+            // Assert
+            Assert.IsType<NotFoundResult>(result.Result);
         }
 
-        // DELETE /api/todos/{id} should return 204 when deletion succeeds
+        // DeleteTodo existing returns NoContent
         [Fact]
         public async Task DeleteTodo_Existing_ReturnsNoContent()
         {
@@ -191,7 +209,7 @@ namespace API.Tests
             Assert.IsType<NoContentResult>(await _ctrl.DeleteTodo(10));
         }
 
-        // DELETE /api/todos/{id} should return 404 when not found
+        // DeleteTodo missing returns NotFound
         [Fact]
         public async Task DeleteTodo_Missing_ReturnsNotFound()
         {
