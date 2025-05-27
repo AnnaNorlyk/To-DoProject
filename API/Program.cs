@@ -3,14 +3,14 @@ using Monitoring;
 using API.Data;
 using API.Services;
 using Microsoft.EntityFrameworkCore;
-
+using FeatureHubSDK;               
+using FeatureHubSDK.Providers;     
 namespace API
 {
     public class Program
     {
         public static void Main(string[] args)
         {
-
             MonitorService.Initialize();
             var logger = MonitorService.Log;
 
@@ -23,16 +23,34 @@ namespace API
                 // Remove default providers so only Serilog is used
                 builder.Logging.ClearProviders();
 
-                // oad appsettings for serilog
+                // Load appsettings for Serilog
                 builder.Configuration
                        .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
                        .AddEnvironmentVariables();
 
-                // Tell the host to use serilog
+                // Tell the host to use Serilog
                 builder.Host.UseSerilog((ctx, lc) =>
                     lc.ReadFrom.Configuration(ctx.Configuration)
                       .Enrich.FromLogContext()
                 );
+
+
+                // Register FeatureHub
+
+                var fhSection = builder.Configuration.GetSection("FeatureHub");
+      
+                var edgeUrl = Environment.GetEnvironmentVariable("FEATUREHUB_EDGE_URL")
+                              ?? throw new InvalidOperationException("FEATUREHUB_EDGE_URL missing in environment");
+                var apiKey = Environment.GetEnvironmentVariable("FEATUREHUB_API_KEY")
+                              ?? throw new InvalidOperationException("FEATUREHUB_API_KEY missing in environment");
+
+                builder.Services.AddSingleton<IClientContext>(sp =>
+                {
+                    var repo = new FeatureRepository(edgeUrl, apiKey, new NullUpdateProcessor());
+                    return repo.NewContext();
+                });
+
+
 
                 // Services
                 builder.Services.AddControllers();
