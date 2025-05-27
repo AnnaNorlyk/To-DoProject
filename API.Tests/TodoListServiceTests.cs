@@ -8,6 +8,7 @@ using Xunit;
 using API.Data;
 using API.Models;
 using API.Services;
+using FeatureHubSDK;
 
 namespace API.Tests
 {
@@ -22,7 +23,11 @@ namespace API.Tests
             var context = new TodoContext(options);
             var logger = new Mock<ILogger<TodoListService>>();
 
-            return new TodoListService(context, logger.Object);
+            var fh = new Mock<IClientContext>();
+            fh.Setup(f => f.IsSet(It.IsAny<string>())).Returns(true);
+            fh.Setup(f => f[It.IsAny<string>()].IsEnabled).Returns(true);
+
+            return new TodoListService(context, logger.Object, fh.Object);
         }
 
         [Fact]
