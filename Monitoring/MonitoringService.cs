@@ -2,6 +2,8 @@
 using Serilog.Enrichers.Span;
 using System;
 using System.Reflection;
+using Serilog.Events;
+
 
 namespace Monitoring
 {
@@ -23,14 +25,12 @@ namespace Monitoring
                          ?? throw new InvalidOperationException("SEQ_URL environment variable is not set.");
 
             Serilog.Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Information() // general level
-                .MinimumLevel.Override("API.Services", LogEventLevel.Debug) //allows more detailed logging for specific namespaces
-                .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-                .MinimumLevel.Override("System", LogEventLevel.Warning)
+                .MinimumLevel.Information()
                 .WriteTo.Console()
                 .WriteTo.Seq(serverUrl: seqUrl)
                 .Enrich.WithSpan()
                 .CreateLogger();
+
 
         }
     }

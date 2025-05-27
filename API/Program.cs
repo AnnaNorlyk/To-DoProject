@@ -10,6 +10,7 @@ namespace API
     {
         public static void Main(string[] args)
         {
+
             MonitorService.Initialize();
             var logger = MonitorService.Log;
 
@@ -19,8 +20,19 @@ namespace API
 
                 var builder = WebApplication.CreateBuilder(args);
 
-                builder.Logging.ClearProviders(); // Removes default providers
-                builder.Host.UseSerilog(logger);
+                // Remove default providers so only Serilog is used
+                builder.Logging.ClearProviders();
+
+                // oad appsettings for serilog
+                builder.Configuration
+                       .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                       .AddEnvironmentVariables();
+
+                // Tell the host to use serilog
+                builder.Host.UseSerilog((ctx, lc) =>
+                    lc.ReadFrom.Configuration(ctx.Configuration)
+                      .Enrich.FromLogContext()
+                );
 
                 // Services
                 builder.Services.AddControllers();
@@ -69,14 +81,15 @@ namespace API
             }
             catch (Exception ex)
             {
+                // If startup fails, log fatal
                 logger.Fatal(ex, "Application failed to start correctly");
                 throw;
             }
             finally
             {
+                // Ensure any buffered events are flushed
                 Log.CloseAndFlush();
             }
         }
-
     }
 }
