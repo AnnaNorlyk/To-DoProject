@@ -3,8 +3,8 @@ using Monitoring;
 using API.Data;
 using API.Services;
 using Microsoft.EntityFrameworkCore;
-using FeatureHubSDK;               
-using FeatureHubSDK.Providers;     
+using FeatureHubSDK;
+
 namespace API
 {
     public class Program
@@ -34,11 +34,7 @@ namespace API
                       .Enrich.FromLogContext()
                 );
 
-
                 // Register FeatureHub
-
-                var fhSection = builder.Configuration.GetSection("FeatureHub");
-      
                 var edgeUrl = Environment.GetEnvironmentVariable("FEATUREHUB_EDGE_URL")
                               ?? throw new InvalidOperationException("FEATUREHUB_EDGE_URL missing in environment");
                 var apiKey = Environment.GetEnvironmentVariable("FEATUREHUB_API_KEY")
@@ -49,8 +45,6 @@ namespace API
                     var repo = new FeatureRepository(edgeUrl, apiKey, new NullUpdateProcessor());
                     return repo.NewContext();
                 });
-
-
 
                 // Services
                 builder.Services.AddControllers();
