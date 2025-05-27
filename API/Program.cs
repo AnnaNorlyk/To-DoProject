@@ -35,8 +35,9 @@ namespace API
                 );
 
                 // Register FeatureHub
-                var edgeUrl = Environment.GetEnvironmentVariable("FEATUREHUB_EDGE_URL")
-                              ?? throw new InvalidOperationException("FEATUREHUB_EDGE_URL missing in environment");
+                var edgeUrl = Environment.GetEnvironmentVariable("FEATUREHUB_URL")
+                              ?? throw new InvalidOperationException("FEATUREHUB_URL missing in environment");
+
                 var apiKey = Environment.GetEnvironmentVariable("FEATUREHUB_API_KEY")
                               ?? throw new InvalidOperationException("FEATUREHUB_API_KEY missing in environment");
 
