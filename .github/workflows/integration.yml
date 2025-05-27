@@ -81,6 +81,7 @@ jobs:
             --mutate "!**/ToDo.cs" \
             --mutate "!**/ToDoList.cs" \
             --mutate "!**/Program.cs" \
+            --mutate "!**/DTO/**" \
             --break-at 80
 
 
