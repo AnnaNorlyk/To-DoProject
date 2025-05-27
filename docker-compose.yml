@@ -13,6 +13,8 @@ services:
   mariadb:
     image: mariadb:latest
     restart: always
+    env_file:
+    - .env
     environment:
       MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
       MYSQL_DATABASE:      "${MYSQL_DATABASE}"
