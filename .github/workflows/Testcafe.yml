@@ -19,6 +19,11 @@ jobs:
         with:
           node-version: 16
 
+      - name: Login to GHCR
+        run: |
+          echo "${{ secrets.CR_PAT }}" \
+            | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
       - name: Start Docker Compose
         run: docker compose up -d
 

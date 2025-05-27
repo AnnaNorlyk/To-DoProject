@@ -40,11 +40,14 @@ namespace API
                 var apiKey = Environment.GetEnvironmentVariable("FEATUREHUB_API_KEY")
                               ?? throw new InvalidOperationException("FEATUREHUB_API_KEY missing in environment");
 
-                builder.Services.AddSingleton<IClientContext>(sp =>
-                {
-                    var repo = new FeatureRepository(edgeUrl, apiKey, new NullUpdateProcessor());
-                    return repo.NewContext();
-                });
+
+                var featureHubContext = new EdgeFeatureHubConfig(edgeUrl, apiKey)
+                                          .NewContext()
+                                          .Build()
+                                          .GetAwaiter()
+                                          .GetResult();
+
+                builder.Services.AddSingleton<IClientContext>(_ => featureHubContext);
 
                 // Services
                 builder.Services.AddControllers();
