@@ -6,9 +6,9 @@ using API.Models;
 
 namespace API.Tests
 {
-    public class TodoContextModelTests
+    public class TodoContextTests
     {
-        // check cascade delete behavior on TodoList -> Todo relationship
+        // Check cascade delete behavior on TodoList -> Todo relationship
         [Fact]
         public void CascadeDeleteBehavior_IsCascade()
         {
@@ -29,7 +29,7 @@ namespace API.Tests
             Assert.Equal(DeleteBehavior.Cascade, cascadeBehavior);
         }
 
-        // check TodoList entity maps to "todolists" table
+        // Check TodoList entity maps to "todolists" table
         [Fact]
         public void TodoList_TableName_IsTodolists()
         {
@@ -47,7 +47,7 @@ namespace API.Tests
             Assert.Equal("todolists", tableName);
         }
 
-        // check Todo entity maps to "todos" table
+        // Check Todo entity maps to "todos" table
         [Fact]
         public void Todo_TableName_IsTodos()
         {
@@ -65,7 +65,7 @@ namespace API.Tests
             Assert.Equal("todos", tableName);
         }
 
-        // check foreign key property is named "TodoListId"
+        // Check foreign key property is named "TodoListId"
         [Fact]
         public void ForeignKeyProperty_IsTodoListId()
         {
@@ -88,7 +88,7 @@ namespace API.Tests
             Assert.Equal("TodoListId", fkProperty);
         }
 
-        // check navigation properties "List" on Todo and "Todos" on TodoList exist
+        // Check navigation properties "List" on Todo and "Todos" on TodoList exist
         [Fact]
         public void NavigationProperties_Exist()
         {
@@ -99,14 +99,65 @@ namespace API.Tests
 
             // Act
             using var ctx = new TodoContext(options);
-            var navNames = ctx.Model
+            var todoNavs = ctx.Model
                 .FindEntityType(typeof(Todo))!
+                .GetNavigations()
+                .Select(n => n.Name);
+            var listNavs = ctx.Model
+                .FindEntityType(typeof(TodoList))!
                 .GetNavigations()
                 .Select(n => n.Name);
 
             // Assert
-            Assert.Contains("List", navNames);
-            Assert.Contains("Todos", navNames);
+            Assert.Contains("List", todoNavs);
+            Assert.Contains("Todos", listNavs);
+        }
+
+        // Check primary key property is named "Id" on both entities
+        [Fact]
+        public void PrimaryKeyProperty_IsId()
+        {
+            // Arrange
+            var options = new DbContextOptionsBuilder<TodoContext>()
+                .UseInMemoryDatabase("KeyTest")
+                .Options;
+
+            // Act
+            using var ctx = new TodoContext(options);
+            var listKey = ctx.Model.FindEntityType(typeof(TodoList))!
+                .FindPrimaryKey()!
+                .Properties
+                .Select(p => p.Name);
+            var todoKey = ctx.Model.FindEntityType(typeof(Todo))!
+                .FindPrimaryKey()!
+                .Properties
+                .Select(p => p.Name);
+
+            // Assert
+            Assert.Contains("Id", listKey);
+            Assert.Contains("Id", todoKey);
+        }
+
+        // Check navigation metadata targets correct entity types
+        [Fact]
+        public void NavigationTargetTypes_AreCorrect()
+        {
+            // Arrange
+            var options = new DbContextOptionsBuilder<TodoContext>()
+                .UseInMemoryDatabase("NavTargetTest")
+                .Options;
+
+            // Act
+            using var ctx = new TodoContext(options);
+            var todoNav = ctx.Model.FindEntityType(typeof(Todo))!
+                .FindNavigation("List")!;
+            var listNav = ctx.Model.FindEntityType(typeof(TodoList))!
+                .FindNavigation("Todos")!;
+
+            // Assert
+            Assert.Equal(typeof(TodoList), todoNav.TargetEntityType.ClrType);
+            Assert.Equal(typeof(Todo), listNav.TargetEntityType.ClrType);
         }
     }
 }
+

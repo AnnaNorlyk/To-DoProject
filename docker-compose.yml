@@ -22,12 +22,13 @@ services:
       MYSQL_PASSWORD:      "${MYSQL_PASSWORD}"
     ports:
       - "3306:3306"
+
     healthcheck:
-      test: ["CMD", "sh", "-c", "mariadb --host=localhost --user=root --password=$MYSQL_ROOT_PASSWORD --execute='SELECT 1'"]
-      start_period: 30s
+      test: ["CMD", "sh", "-c", "mariadb --host=127.0.0.1 --user=root --password=\"$MYSQL_ROOT_PASSWORD\" --execute=\"SELECT 1\""]
       interval: 10s
       timeout: 5s
       retries: 5
+
 
 
 
