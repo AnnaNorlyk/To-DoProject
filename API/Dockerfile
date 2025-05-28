@@ -4,8 +4,8 @@ ARG APP_UID=1000
 RUN adduser --uid "$APP_UID" --disabled-password appuser
 USER appuser
 WORKDIR /app
-EXPOSE 80
-ENV ASPNETCORE_URLS=http://+:80
+EXPOSE 8080
+ENV ASPNETCORE_URLS=http://+:8080
 ENV DOTNET_USE_POLLING_FILE_WATCHER=true
 
 # Build stage
