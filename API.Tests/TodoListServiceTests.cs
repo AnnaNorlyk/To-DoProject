@@ -1,4 +1,7 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -11,7 +14,7 @@ namespace API.Tests
 {
     public class TodoListServiceTests
     {
-        // Helper to create service with in-memory DB and default feature flag
+        // Helper: create service with in-memory DB, mock logger, and feature flag
         private static TodoListService CreateService(string dbName, out Mock<ILogger<TodoListService>> mockLogger, bool flagEnabled = true)
         {
             var options = new DbContextOptionsBuilder<TodoContext>()
@@ -224,7 +227,7 @@ namespace API.Tests
             Assert.False(result);
         }
 
-        // Test: AddList logs creation message
+        // Test: AddList logs Information with correct message
         [Fact]
         public async Task AddList_LogsInformation()
         {
@@ -248,14 +251,14 @@ namespace API.Tests
                 x => x.Log(
                     LogLevel.Information,
                     It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Creating list LoggedList")),
+                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Added new list 'LoggedList' with ID")),
                     null,
                     It.IsAny<Func<It.IsAnyType, Exception, string>>()
                 ), Times.Once
             );
         }
 
-        // Test: UpdateTodo logs warning when todo not found
+        // Test: UpdateTodo logs Warning when todo is missing
         [Fact]
         public async Task UpdateTodo_LogsWarningOnMissing()
         {
@@ -280,7 +283,7 @@ namespace API.Tests
                 x => x.Log(
                     LogLevel.Warning,
                     It.IsAny<EventId>(),
-                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Attempt to update non-existent todo 999")),
+                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Todo with ID 999 not found for update")),
                     null,
                     It.IsAny<Func<It.IsAnyType, Exception, string>>()
                 ), Times.Once
