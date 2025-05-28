@@ -1,4 +1,4 @@
-# Use the full SDK image for build & publish
+# Use full SDK image for build & publish
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
@@ -13,10 +13,22 @@ RUN dotnet publish -c Release -o /app
 
 # Runtime image
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
+
+ARG APP_UID=1000
+RUN adduser --uid $APP_UID --disabled-password appuser
+
 WORKDIR /app
 ENV ASPNETCORE_URLS=http://+:8080
 
-# Copy the published output
-COPY --from=build /app .  
+COPY --from=build --chown=appuser:appuser /app .
+
+# Remove write permissions for security
+RUN chmod -R a-w /app
+
+
+USER appuser
+
+
+EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "Monitoring.dll"]

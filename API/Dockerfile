@@ -43,6 +43,11 @@ RUN dotnet publish "API.csproj" \
 # Final runtime image
 FROM base AS final
 WORKDIR /app
+
+# Copy published output with proper ownership
 COPY --from=publish --chown=appuser:appuser /app/publish .
+
+# Remove write permissions recursively from all files and directories
+RUN chmod -R a-w /app
 
 ENTRYPOINT ["dotnet", "API.dll"]
