@@ -9,57 +9,51 @@ namespace API.Tests
 {
     public class TodoContextTests
     {
-        // Check cascade delete behavior on TodoList -> Todo relationship
+        // Verify cascade delete from TodoList to Todo is enabled
         [Fact]
-        public void CascadeDeleteBehavior_IsCascade()
+        public void CascadeDelete_FromTodoListToTodo_IsCascade()
         {
             // Arrange
             var options = new DbContextOptionsBuilder<TodoContext>()
-                .UseInMemoryDatabase("CascadeTest")
+                .UseInMemoryDatabase("CascadeDeleteTest")
                 .Options;
 
             // Act
-            using var ctx = new TodoContext(options);
-            var allFks = ctx.Model
+            using var context = new TodoContext(options);
+            var foreignKeys = context.Model
                 .FindEntityType(typeof(Todo))!
                 .GetForeignKeys()
-                .ToList();            // materialize to list for Count and indexing
+                .ToList();
 
-            DeleteBehavior cascadeBehavior = default;
-            for (int i = 0; i < allFks.Count; i++)
-            {
-                if (allFks[i].PrincipalEntityType.ClrType == typeof(TodoList))
-                {
-                    cascadeBehavior = allFks[i].DeleteBehavior;
-                    break;
-                }
-            }
+            var cascadeBehavior = foreignKeys
+                .FirstOrDefault(fk => fk.PrincipalEntityType.ClrType == typeof(TodoList))
+                ?.DeleteBehavior;
 
             // Assert
             Assert.Equal(DeleteBehavior.Cascade, cascadeBehavior);
         }
 
-        // Check TodoList entity maps to "todolists" table
+        // Verify TodoList maps to "todolists" table
         [Fact]
-        public void TodoList_TableName_IsTodolists()
+        public void TodoList_MapsTo_TableTodolists()
         {
             // Arrange
             var options = new DbContextOptionsBuilder<TodoContext>()
-                .UseInMemoryDatabase("TableTest")
+                .UseInMemoryDatabase("TodoListTableTest")
                 .Options;
 
             // Act
-            using var ctx = new TodoContext(options);
-            var tableName = ctx.Model.FindEntityType(typeof(TodoList))?
+            using var context = new TodoContext(options);
+            var tableName = context.Model.FindEntityType(typeof(TodoList))?
                 .GetTableName();
 
             // Assert
             Assert.Equal("todolists", tableName);
         }
 
-        // Check Todo entity maps to "todos" table
+        // Verify Todo maps to "todos" table
         [Fact]
-        public void Todo_TableName_IsTodos()
+        public void Todo_MapsTo_TableTodos()
         {
             // Arrange
             var options = new DbContextOptionsBuilder<TodoContext>()
@@ -67,62 +61,53 @@ namespace API.Tests
                 .Options;
 
             // Act
-            using var ctx = new TodoContext(options);
-            var tableName = ctx.Model.FindEntityType(typeof(Todo))?
+            using var context = new TodoContext(options);
+            var tableName = context.Model.FindEntityType(typeof(Todo))?
                 .GetTableName();
 
             // Assert
             Assert.Equal("todos", tableName);
         }
 
-        // Check foreign key property is named "TodoListId"
+        // Verify foreign key property in Todo to TodoList is "TodoListId"
         [Fact]
-        public void ForeignKeyProperty_IsTodoListId()
+        public void Todo_ForeignKeyProperty_IsTodoListId()
         {
             // Arrange
             var options = new DbContextOptionsBuilder<TodoContext>()
-                .UseInMemoryDatabase("FKTest")
+                .UseInMemoryDatabase("ForeignKeyPropertyTest")
                 .Options;
 
             // Act
-            using var ctx = new TodoContext(options);
-            var fkList = ctx.Model
+            using var context = new TodoContext(options);
+            var foreignKey = context.Model
                 .FindEntityType(typeof(Todo))!
                 .GetForeignKeys()
-                .ToList();            // materialize to list for indexing
+                .FirstOrDefault(fk => fk.PrincipalEntityType.ClrType == typeof(TodoList));
 
-            IForeignKey matchingFk = null!;
-            for (int i = 0; i < fkList.Count; i++)
-            {
-                if (fkList[i].PrincipalEntityType.ClrType == typeof(TodoList))
-                {
-                    matchingFk = fkList[i];
-                    break;
-                }
-            }
-
-            var fkProperty = matchingFk.Properties[0].Name;
+            var propertyName = foreignKey?.Properties[0].Name;
 
             // Assert
-            Assert.Equal("TodoListId", fkProperty);
+            Assert.Equal("TodoListId", propertyName);
         }
 
-        // Check navigation properties "List" on Todo and "Todos" on TodoList exist
+        // Verify navigation properties exist on both entities
         [Fact]
-        public void NavigationProperties_Exist()
+        public void NavigationProperties_ExistOnEntities()
         {
             // Arrange
             var options = new DbContextOptionsBuilder<TodoContext>()
-                .UseInMemoryDatabase("NavTest")
+                .UseInMemoryDatabase("NavigationPropertiesTest")
                 .Options;
 
             // Act
-            using var ctx = new TodoContext(options);
-            var todoNavs = ctx.Model
+            using var context = new TodoContext(options);
+            var todoNavs = context.Model
                 .FindEntityType(typeof(Todo))!
                 .GetNavigations()
                 .Select(n => n.Name);
-            var listNavs = ctx.Model
+
+            var listNavs = context.Model
                 .FindEntityType(typeof(TodoList))!
                 .GetNavigations()
                 .Select(n => n.Name);
@@ -132,50 +117,52 @@ namespace API.Tests
             Assert.Contains("Todos", listNavs);
         }
 
-        // Check primary key property is named "Id" on both entities
+        // Verify primary key property named "Id" on TodoList and Todo
         [Fact]
-        public void PrimaryKeyProperty_IsId()
+        public void PrimaryKeyProperty_IsIdOnBothEntities()
         {
             // Arrange
             var options = new DbContextOptionsBuilder<TodoContext>()
-                .UseInMemoryDatabase("KeyTest")
+                .UseInMemoryDatabase("PrimaryKeyTest")
                 .Options;
 
             // Act
-            using var ctx = new TodoContext(options);
-            var listKey = ctx.Model.FindEntityType(typeof(TodoList))!
+            using var context = new TodoContext(options);
+            var listKeyProps = context.Model.FindEntityType(typeof(TodoList))!
                 .FindPrimaryKey()!
                 .Properties
                 .Select(p => p.Name);
-            var todoKey = ctx.Model.FindEntityType(typeof(Todo))!
+
+            var todoKeyProps = context.Model.FindEntityType(typeof(Todo))!
                 .FindPrimaryKey()!
                 .Properties
                 .Select(p => p.Name);
 
             // Assert
-            Assert.Contains("Id", listKey);
-            Assert.Contains("Id", todoKey);
+            Assert.Contains("Id", listKeyProps);
+            Assert.Contains("Id", todoKeyProps);
         }
 
-        // Check navigation metadata targets correct entity types
+        // Verify navigation properties target correct entity types
         [Fact]
-        public void NavigationTargetTypes_AreCorrect()
+        public void NavigationProperties_TargetCorrectEntityTypes()
         {
             // Arrange
             var options = new DbContextOptionsBuilder<TodoContext>()
-                .UseInMemoryDatabase("NavTargetTest")
+                .UseInMemoryDatabase("NavigationTargetTest")
                 .Options;
 
             // Act
-            using var ctx = new TodoContext(options);
-            var todoNav = ctx.Model.FindEntityType(typeof(Todo))!
-                .FindNavigation("List")!;
-            var listNav = ctx.Model.FindEntityType(typeof(TodoList))!
-                .FindNavigation("Todos")!;
+            using var context = new TodoContext(options);
+            var todoNav = context.Model.FindEntityType(typeof(Todo))!
+                .FindNavigation("List");
+
+            var listNav = context.Model.FindEntityType(typeof(TodoList))!
+                .FindNavigation("Todos");
 
             // Assert
-            Assert.Equal(typeof(TodoList), todoNav.TargetEntityType.ClrType);
-            Assert.Equal(typeof(Todo), listNav.TargetEntityType.ClrType);
+            Assert.Equal(typeof(TodoList), todoNav?.TargetEntityType.ClrType);
+            Assert.Equal(typeof(Todo), listNav?.TargetEntityType.ClrType);
         }
     }
 }

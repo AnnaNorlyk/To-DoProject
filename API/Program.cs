@@ -32,7 +32,7 @@ namespace API
                       .Enrich.FromLogContext()
                 );
 
-                // Log current environment explicitly
+
                 logger.Information("Current environment: {Env}", builder.Environment.EnvironmentName);
 
                 // Register services
@@ -53,7 +53,7 @@ namespace API
                     });
                 });
 
-                // Validate DB env vars
+
                 var dbHost = Environment.GetEnvironmentVariable("MYSQL_HOST");
                 var dbName = Environment.GetEnvironmentVariable("MYSQL_DATABASE");
                 var dbUser = Environment.GetEnvironmentVariable("MYSQL_USER");
@@ -64,7 +64,7 @@ namespace API
                     string.IsNullOrWhiteSpace(dbUser) ||
                     string.IsNullOrWhiteSpace(dbPass))
                 {
-                    throw new InvalidOperationException("One or more required DB environment variables are missing.");
+                    throw new InvalidOperationException("environment variables are missing.");
                 }
 
                 var connectionString = $"Server={dbHost};Database={dbName};User={dbUser};Password={dbPass};";
@@ -73,15 +73,15 @@ namespace API
                     options.UseMySql(connectionString, new MySqlServerVersion(new Version(10, 6)))
                 );
 
-                // Register FeatureHub safely
+
                 FeatureFlagInitializer.Configure(builder.Services);
 
-                // Your services
+
                 builder.Services.AddScoped<ITodoListService, TodoListService>();
 
                 var app = builder.Build();
 
-                // Always enable Swagger UI, serve at root "/"
+
                 app.UseSwagger();
                 app.UseSwaggerUI(c => c.RoutePrefix = "");
 

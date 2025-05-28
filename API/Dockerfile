@@ -6,6 +6,8 @@ USER appuser
 WORKDIR /app
 EXPOSE 80
 ENV ASPNETCORE_URLS=http://+:80
+# Optional: Enable polling file watcher for dev scenarios (remove if not needed)
+ENV DOTNET_USE_POLLING_FILE_WATCHER=true
 
 # Build stage
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build

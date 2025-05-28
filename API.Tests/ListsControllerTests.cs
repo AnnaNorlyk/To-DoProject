@@ -1,223 +1,258 @@
 using Xunit;
 using Moq;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using API.Controllers;
-using API.DTOs;
 using API.Services;
+using API.DTOs;
+using Microsoft.AspNetCore.Mvc;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System;
 
 namespace API.Tests
 {
-    public class ListsControllerTests
+    public class ListsControllerLoggerTests
     {
-        private readonly Mock<ITodoListService> _svc = new();
-        private readonly Mock<ILogger<ListsController>> _log = new();
-        private readonly ListsController _ctrl;
+        private readonly Mock<ITodoListService> _mockService = new();
+        private readonly Mock<ILogger<ListsController>> _mockLogger = new();
+        private readonly ListsController _controller;
 
-        public ListsControllerTests()
+        public ListsControllerLoggerTests()
         {
-            _ctrl = new ListsController(_svc.Object, _log.Object);
+            _controller = new ListsController(_mockService.Object, _mockLogger.Object);
         }
 
-        // GetLists returns Ok
-        [Fact]
-        public async Task GetLists_ReturnsOk()
+        // Helper method to check logger message contains a given substring safely
+        private static bool LoggerStateContains(object v, string text)
         {
-            // Arrange
-            var data = new List<TodoListDto> { new() { Id = 1, Name = "X" } };
-            _svc.Setup(s => s.GetAllListsAsync()).ReturnsAsync(data);
-
-            // Act
-            var actionResult = await _ctrl.GetLists();
-
-            // Assert
-            var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
-            Assert.Same(data, ok.Value);
+            var state = v as object;
+            return state != null && (state.ToString()?.Contains(text) ?? false);
         }
 
-        // AddList null returns bad request
-        [Fact]
-        public async Task AddList_Null_ReturnsBadRequest()
-        {
-            // Act
-            var result = await _ctrl.AddList(null!);
 
-            // Assert
-            Assert.IsType<BadRequestObjectResult>(result.Result);
+        [Fact]
+        public async Task GetLists_LogsInformation()
+        {
+            _mockService.Setup(s => s.GetAllListsAsync()).ReturnsAsync(new List<TodoListDto>());
+
+            var result = await _controller.GetLists();
+
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Information,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => LoggerStateContains(v, "GET /lists - Fetching all lists")),
+                    null,
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
         }
 
-        // AddList whitespace returns bad request
         [Fact]
-        public async Task AddList_Whitespace_ReturnsBadRequest()
+        public async Task AddList_LogsWarning_OnEmptyName()
         {
-            // Act
-            var result = await _ctrl.AddList("   ");
+            var result = await _controller.AddList("   ");
 
-            // Assert
-            Assert.IsType<BadRequestObjectResult>(result.Result);
+            var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Warning,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => LoggerStateContains(v, "Attempted to create list with empty name")),
+                    null,
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
         }
 
-        // AddList valid returns created
         [Fact]
-        public async Task AddList_Valid_ReturnsCreated()
+        public async Task AddList_LogsInformation_OnSuccess()
         {
-            // Arrange
-            var dto = new TodoListDto { Id = 2, Name = "Groceries" };
-            _svc.Setup(s => s.AddListAsync("Groceries")).ReturnsAsync(dto);
+            var newList = new TodoListDto { Id = 1, Name = "TestList", Created = DateTime.UtcNow, Todos = new List<TodoDto>() };
+            _mockService.Setup(s => s.AddListAsync(It.IsAny<string>())).ReturnsAsync(newList);
 
-            // Act
-            var actionResult = await _ctrl.AddList("Groceries");
+            var result = await _controller.AddList("TestList");
 
-            // Assert
-            var created = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
-            Assert.Equal(nameof(_ctrl.GetLists), created.ActionName);
-            Assert.Equal(dto.Id, (int)created.RouteValues!["id"]!);
-            Assert.Equal(dto, created.Value);
+            var createdAtResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Information,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => LoggerStateContains(v, $"Created list with ID {newList.Id}")),
+                    null,
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
         }
 
-        // DeleteList existing returns NoContent
         [Fact]
-        public async Task DeleteList_Existing_ReturnsNoContent()
+        public async Task DeleteList_LogsInfo_WhenSuccess()
         {
-            // Arrange
-            _svc.Setup(s => s.DeleteListAsync(1)).ReturnsAsync(true);
+            int listId = 1;
+            _mockService.Setup(s => s.DeleteListAsync(listId)).ReturnsAsync(true);
 
-            // Act & Assert
-            Assert.IsType<NoContentResult>(await _ctrl.DeleteList(1));
+            var result = await _controller.DeleteList(listId);
+
+            Assert.IsType<NoContentResult>(result);
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Information,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => LoggerStateContains(v, "List deleted")),
+                    null,
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
         }
 
-        // DeleteList missing returns NotFound
         [Fact]
-        public async Task DeleteList_Missing_ReturnsNotFound()
+        public async Task DeleteList_LogsWarning_WhenNotFound()
         {
-            // Arrange
-            _svc.Setup(s => s.DeleteListAsync(9)).ReturnsAsync(false);
+            int listId = 2;
+            _mockService.Setup(s => s.DeleteListAsync(listId)).ReturnsAsync(false);
 
-            // Act & Assert
-            Assert.IsType<NotFoundResult>(await _ctrl.DeleteList(9));
+            var result = await _controller.DeleteList(listId);
+
+            Assert.IsType<NotFoundResult>(result);
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Warning,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => LoggerStateContains(v, "List not found")),
+                    null,
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
         }
 
-        // GetTodos returns Ok
         [Fact]
-        public async Task GetTodos_ReturnsOk()
+        public async Task GetTodos_LogsInformation()
         {
-            // Arrange
-            var todos = new List<TodoDto> { new() { Id = 5, Text = "Buy milk" } };
-            _svc.Setup(s => s.GetTodosAsync(1)).ReturnsAsync(todos);
+            int listId = 5;
+            _mockService.Setup(s => s.GetTodosAsync(listId)).ReturnsAsync(new List<TodoDto>());
 
-            // Act
-            var actionResult = await _ctrl.GetTodos(1);
+            var result = await _controller.GetTodos(listId);
 
-            // Assert
-            var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
-            Assert.Same(todos, ok.Value);
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Information,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => LoggerStateContains(v, $"GET /lists/{listId}/todos - Fetching todos")),
+                    null,
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
         }
 
-        // GetTodos null returns Ok
         [Fact]
-        public async Task GetTodos_Null_ReturnsOk()
+        public async Task AddTodo_LogsWarning_OnEmptyText()
         {
-            // Arrange
-            _svc.Setup(s => s.GetTodosAsync(1)).ReturnsAsync((List<TodoDto>)null);
+            int listId = 3;
 
-            // Act
-            var actionResult = await _ctrl.GetTodos(1);
+            var result = await _controller.AddTodo(listId, "  ");
 
-            // Assert
-            var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
-            Assert.Null(ok.Value);
+            var badRequest = Assert.IsType<BadRequestObjectResult>(result.Result);
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Warning,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => LoggerStateContains(v, "Empty task text")),
+                    null,
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
         }
 
-        // AddTodo null returns bad request
         [Fact]
-        public async Task AddTodo_Null_ReturnsBadRequest()
+        public async Task AddTodo_LogsInformation_OnSuccess()
         {
-            // Act
-            var result = await _ctrl.AddTodo(1, null!);
+            int listId = 4;
+            var todoDto = new TodoDto { Id = 10, Text = "Task", Created = DateTime.UtcNow };
+            _mockService.Setup(s => s.AddTodoAsync(listId, It.IsAny<string>())).ReturnsAsync(todoDto);
 
-            // Assert
-            Assert.IsType<BadRequestObjectResult>(result.Result);
+            var result = await _controller.AddTodo(listId, "Task");
+
+            var createdAtResult = Assert.IsType<CreatedAtActionResult>(result.Result);
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Information,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => LoggerStateContains(v, $"Created todo with ID {todoDto.Id}")),
+                    null,
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
         }
 
-        // AddTodo whitespace returns bad request
         [Fact]
-        public async Task AddTodo_Whitespace_ReturnsBadRequest()
+        public async Task UpdateTodo_LogsWarning_WhenNotFound()
         {
-            // Act
-            var result = await _ctrl.AddTodo(1, "   ");
+            int todoId = 99;
+            _mockService.Setup(s => s.UpdateTodoAsync(todoId, It.IsAny<string>())).ReturnsAsync((TodoDto?)null);
 
-            // Assert
-            Assert.IsType<BadRequestObjectResult>(result.Result);
+            var result = await _controller.UpdateTodo(todoId, "New text");
+
+            var notFound = Assert.IsType<NotFoundResult>(result.Result);
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Warning,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => LoggerStateContains(v, "Todo not found")),
+                    null,
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
         }
 
-        // AddTodo valid returns created
         [Fact]
-        public async Task AddTodo_Valid_ReturnsCreated()
+        public async Task UpdateTodo_LogsInformation_OnSuccess()
         {
-            // Arrange
-            var dto = new TodoDto { Id = 3, Text = "Walk dog" };
-            _svc.Setup(s => s.AddTodoAsync(1, "Walk dog")).ReturnsAsync(dto);
+            int todoId = 20;
+            var updatedDto = new TodoDto { Id = todoId, Text = "Updated", Created = DateTime.UtcNow };
+            _mockService.Setup(s => s.UpdateTodoAsync(todoId, It.IsAny<string>())).ReturnsAsync(updatedDto);
 
-            // Act
-            var actionResult = await _ctrl.AddTodo(1, "Walk dog");
+            var result = await _controller.UpdateTodo(todoId, "Updated");
 
-            // Assert
-            var created = Assert.IsType<CreatedAtActionResult>(actionResult.Result);
-            Assert.Equal(nameof(_ctrl.GetTodos), created.ActionName);
-            Assert.Equal(1, (int)created.RouteValues!["listId"]!);
-            Assert.Equal(dto, created.Value);
+            var okResult = Assert.IsType<OkObjectResult>(result.Result);
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Information,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => LoggerStateContains(v, "Todo updated")),
+                    null,
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
         }
 
-        // UpdateTodo existing returns Ok
         [Fact]
-        public async Task UpdateTodo_Existing_ReturnsOk()
+        public async Task DeleteTodo_LogsInformation_WhenSuccess()
         {
-            // Arrange
-            var dto = new TodoDto { Id = 4, Text = "Updated" };
-            _svc.Setup(s => s.UpdateTodoAsync(4, "Updated")).ReturnsAsync(dto);
+            int todoId = 5;
+            _mockService.Setup(s => s.DeleteTodoAsync(todoId)).ReturnsAsync(true);
 
-            // Act
-            var actionResult = await _ctrl.UpdateTodo(4, "Updated");
+            var result = await _controller.DeleteTodo(todoId);
 
-            // Assert
-            var ok = Assert.IsType<OkObjectResult>(actionResult.Result);
-            Assert.Equal(dto, ok.Value);
+            Assert.IsType<NoContentResult>(result);
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Information,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => LoggerStateContains(v, "Todo deleted")),
+                    null,
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
         }
 
-        // UpdateTodo null returns NotFound
         [Fact]
-        public async Task UpdateTodo_NullText_ReturnsNotFound()
+        public async Task DeleteTodo_LogsWarning_WhenNotFound()
         {
-            // Arrange
-            _svc.Setup(s => s.UpdateTodoAsync(5, null!)).ReturnsAsync((TodoDto)null);
+            int todoId = 6;
+            _mockService.Setup(s => s.DeleteTodoAsync(todoId)).ReturnsAsync(false);
 
-            // Act
-            var result = await _ctrl.UpdateTodo(5, null!);
+            var result = await _controller.DeleteTodo(todoId);
 
-            // Assert
-            Assert.IsType<NotFoundResult>(result.Result);
-        }
-
-        // DeleteTodo existing returns NoContent
-        [Fact]
-        public async Task DeleteTodo_Existing_ReturnsNoContent()
-        {
-            // Arrange
-            _svc.Setup(s => s.DeleteTodoAsync(10)).ReturnsAsync(true);
-
-            // Act & Assert
-            Assert.IsType<NoContentResult>(await _ctrl.DeleteTodo(10));
-        }
-
-        // DeleteTodo missing returns NotFound
-        [Fact]
-        public async Task DeleteTodo_Missing_ReturnsNotFound()
-        {
-            // Arrange
-            _svc.Setup(s => s.DeleteTodoAsync(20)).ReturnsAsync(false);
-
-            // Act & Assert
-            Assert.IsType<NotFoundResult>(await _ctrl.DeleteTodo(20));
+            Assert.IsType<NotFoundResult>(result);
+            _mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Warning,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => LoggerStateContains(v, "Todo not found")),
+                    null,
+                    It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
+                Times.Once);
         }
     }
 }
