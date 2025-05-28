@@ -46,9 +46,11 @@ namespace API.Tests
             logger.Verify(x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<object>(v => v != null && v.ToString() != null && v.ToString()!.Contains("Added new list")),
+                It.Is<It.IsAnyType>(v =>
+                    v != null && v.ToString() != null &&
+                    v.ToString()!.Contains($"Added new list 'New List' with ID")),
                 It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                 Times.Once);
         }
 
@@ -63,9 +65,11 @@ namespace API.Tests
             logger.Verify(x => x.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<object>(v => v != null && v.ToString() != null && v.ToString()!.Contains("List deletion feature is disabled")),
+                It.Is<It.IsAnyType>(v =>
+                    v != null && v.ToString() != null &&
+                    v.ToString()!.Contains("List deletion feature is disabled or FeatureHub not configured.")),
                 It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                 Times.Once);
         }
 
@@ -80,9 +84,11 @@ namespace API.Tests
             logger.Verify(x => x.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<object>(v => v != null && v.ToString() != null && v.ToString()!.Contains("No list was found")),
+                It.Is<It.IsAnyType>(v =>
+                    v != null && v.ToString() != null &&
+                    v.ToString()!.Contains("No list was found with ID 999.")),
                 It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                 Times.Once);
         }
 
@@ -104,9 +110,11 @@ namespace API.Tests
             logger.Verify(x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<object>(v => v != null && v.ToString() != null && v.ToString()!.Contains("Successfully deleted")),
+                It.Is<It.IsAnyType>(v =>
+                    v != null && v.ToString() != null &&
+                    v.ToString()!.Contains($"Successfully deleted list with ID {list.Id}.")),
                 It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                 Times.Once);
         }
 
@@ -128,9 +136,11 @@ namespace API.Tests
             logger.Verify(x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<object>(v => v != null && v.ToString() != null && v.ToString()!.Contains("Added todo")),
+                It.Is<It.IsAnyType>(v =>
+                    v != null && v.ToString() != null &&
+                    v.ToString()!.Contains($"Added todo 'Task' to list {list.Id}")),
                 It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                 Times.Once);
         }
 
@@ -155,9 +165,11 @@ namespace API.Tests
             logger.Verify(x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<object>(v => v != null && v.ToString() != null && v.ToString()!.Contains("Updated todo")),
+                It.Is<It.IsAnyType>(v =>
+                    v != null && v.ToString() != null &&
+                    v.ToString()!.Contains($"Updated todo ID {todo.Id} with new text")),
                 It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                 Times.Once);
         }
 
@@ -173,9 +185,11 @@ namespace API.Tests
             logger.Verify(x => x.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<object>(v => v != null && v.ToString() != null && v.ToString()!.Contains("not found")),
+                It.Is<It.IsAnyType>(v =>
+                    v != null && v.ToString() != null &&
+                    v.ToString()!.Contains("Todo with ID 999 not found for update")),
                 It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                 Times.Once);
         }
 
@@ -202,9 +216,11 @@ namespace API.Tests
             logger.Verify(x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<object>(v => v != null && v.ToString() != null && v.ToString()!.Contains("Deleted todo")),
+                It.Is<It.IsAnyType>(v =>
+                    v != null && v.ToString() != null &&
+                    v.ToString()!.Contains($"Deleted todo with ID {todo.Id}")),
                 It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                 Times.Once);
         }
 
@@ -220,9 +236,11 @@ namespace API.Tests
             logger.Verify(x => x.Log(
                 LogLevel.Warning,
                 It.IsAny<EventId>(),
-                It.Is<object>(v => v != null && v.ToString() != null && v.ToString()!.Contains("not found")),
+                It.Is<It.IsAnyType>(v =>
+                    v != null && v.ToString() != null &&
+                    v.ToString()!.Contains("Todo with ID 999 not found for deletion")),
                 It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                 Times.Once);
         }
 
@@ -246,9 +264,11 @@ namespace API.Tests
             logger.Verify(x => x.Log(
                 LogLevel.Information,
                 It.IsAny<EventId>(),
-                It.Is<object>(v => v != null && v.ToString() != null && v.ToString()!.Contains("Fetching todos")),
+                It.Is<It.IsAnyType>(v =>
+                    v != null && v.ToString() != null &&
+                    v.ToString()!.Contains($"Fetching todos for list ID {list.Id}")),
                 It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
+                It.IsAny<Func<It.IsAnyType, Exception?, string>>()),
                 Times.Once);
         }
     }
