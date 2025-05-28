@@ -1,4 +1,6 @@
+#Local development configuration for FeatureHub and Seq because they crash mys erver otherwise. 
 services:
+  # Seq local logging server
   seq:
     image: datalust/seq:2025.1
     container_name: seq
@@ -9,5 +11,16 @@ services:
     ports:
       - "5341:80"
 
+  # FeatureHub local flag server
+  featurehub:
+    image: featurehub/party-server:latest
+    container_name: featurehub
+    restart: always
+    volumes:
+      - featurehub-h2-data:/db
+    ports:
+      - "8085:8085"
+
 volumes:
   seq-data:
+  featurehub-h2-data:

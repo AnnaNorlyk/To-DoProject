@@ -1,6 +1,3 @@
-# docker-compose.yml
-version: "3.9"
-
 services:
 
   mariadb:
@@ -59,13 +56,5 @@ services:
     ports:
       - "3000:80"
 
-  featurehub:
-    image: featurehub/party-server:latest
-    restart: always
-    volumes:
-      - featurehub-h2-data:/db
-    ports:
-      - "8085:8085"
-
 volumes:
-  featurehub-h2-data:
+  mariadb_data:   # if you need it for migrations, otherwise remove
