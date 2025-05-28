@@ -1,7 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Threading.Tasks;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
@@ -14,25 +11,28 @@ namespace API.Tests
 {
     public class TodoListServiceTests
     {
-        private static TodoListService CreateService(string dbName, bool flagEnabled = true)
+        // Helper to create service with in-memory DB and default feature flag
+        private static TodoListService CreateService(string dbName, out Mock<ILogger<TodoListService>> mockLogger, bool flagEnabled = true)
         {
             var options = new DbContextOptionsBuilder<TodoContext>()
                 .UseInMemoryDatabase(dbName)
                 .Options;
             var ctx = new TodoContext(options);
-            var logger = new Mock<ILogger<TodoListService>>();
+
+            mockLogger = new Mock<ILogger<TodoListService>>();
             var fh = new Mock<IClientContext>();
             fh.Setup(f => f.IsSet("enableListDeletion")).Returns(flagEnabled);
             fh.Setup(f => f["enableListDeletion"].IsEnabled).Returns(flagEnabled);
-            return new TodoListService(ctx, logger.Object, fh.Object);
+
+            return new TodoListService(ctx, mockLogger.Object, fh.Object);
         }
 
-        // Check empty list returned when database is empty
+        // Test: empty list when DB is empty
         [Fact]
         public async Task GetAllListsEmpty()
         {
             // Arrange
-            var svc = CreateService(Guid.NewGuid().ToString());
+            var svc = CreateService(Guid.NewGuid().ToString(), out _);
 
             // Act
             var result = await svc.GetAllListsAsync();
@@ -41,12 +41,12 @@ namespace API.Tests
             Assert.Empty(result);
         }
 
-        // Check empty todos when list has no items
+        // Test: empty todos when new list has no items
         [Fact]
         public async Task GetTodosEmpty()
         {
             // Arrange
-            var svc = CreateService(Guid.NewGuid().ToString());
+            var svc = CreateService(Guid.NewGuid().ToString(), out _);
             var list = await svc.AddListAsync("Test");
 
             // Act
@@ -56,12 +56,12 @@ namespace API.Tests
             Assert.Empty(result);
         }
 
-        // Check deletion returns false for non-existent list
+        // Test: delete non-existent list returns false
         [Fact]
         public async Task DeleteListInvalid()
         {
             // Arrange
-            var svc = CreateService(Guid.NewGuid().ToString());
+            var svc = CreateService(Guid.NewGuid().ToString(), out _);
 
             // Act
             var result = await svc.DeleteListAsync(123);
@@ -70,12 +70,12 @@ namespace API.Tests
             Assert.False(result);
         }
 
-        // Check null returned when updating non-existent todo
+        // Test: update non-existent todo returns null
         [Fact]
         public async Task UpdateTodoInvalid()
         {
             // Arrange
-            var svc = CreateService(Guid.NewGuid().ToString());
+            var svc = CreateService(Guid.NewGuid().ToString(), out _);
 
             // Act
             var result = await svc.UpdateTodoAsync(999, "text");
@@ -84,12 +84,12 @@ namespace API.Tests
             Assert.Null(result);
         }
 
-        // Check deletion returns false for non-existent todo
+        // Test: delete non-existent todo returns false
         [Fact]
         public async Task DeleteTodoInvalid()
         {
             // Arrange
-            var svc = CreateService(Guid.NewGuid().ToString());
+            var svc = CreateService(Guid.NewGuid().ToString(), out _);
 
             // Act
             var result = await svc.DeleteTodoAsync(999);
@@ -98,12 +98,12 @@ namespace API.Tests
             Assert.False(result);
         }
 
-        // Check lists are returned in ascending ID order
+        // Test: lists are in ascending ID order
         [Fact]
         public async Task GetAllListsOrder()
         {
             // Arrange
-            var svc = CreateService(Guid.NewGuid().ToString());
+            var svc = CreateService(Guid.NewGuid().ToString(), out _);
             await svc.AddListAsync("A");
             await svc.AddListAsync("B");
 
@@ -114,12 +114,12 @@ namespace API.Tests
             Assert.True(result[0].Id < result[1].Id);
         }
 
-        // Check todos are returned in ascending ID order
+        // Test: todos are in ascending ID order
         [Fact]
         public async Task GetTodosOrder()
         {
             // Arrange
-            var svc = CreateService(Guid.NewGuid().ToString());
+            var svc = CreateService(Guid.NewGuid().ToString(), out _);
             var list = await svc.AddListAsync("L");
             await svc.AddTodoAsync(list.Id, "one");
             await svc.AddTodoAsync(list.Id, "two");
@@ -131,12 +131,12 @@ namespace API.Tests
             Assert.True(result[0].Id < result[1].Id);
         }
 
-        // Check new list is created with correct name
+        // Test: adding a list sets correct name
         [Fact]
         public async Task AddListCreates()
         {
             // Arrange
-            var svc = CreateService(Guid.NewGuid().ToString());
+            var svc = CreateService(Guid.NewGuid().ToString(), out _);
 
             // Act
             var result = await svc.AddListAsync("MyList");
@@ -145,12 +145,12 @@ namespace API.Tests
             Assert.Equal("MyList", result.Name);
         }
 
-        // Check list deletion removes list
+        // Test: deleting a list removes it
         [Fact]
         public async Task DeleteListRemoves()
         {
             // Arrange
-            var svc = CreateService(Guid.NewGuid().ToString());
+            var svc = CreateService(Guid.NewGuid().ToString(), out _);
             var list = await svc.AddListAsync("ToRemove");
 
             // Act
@@ -160,12 +160,12 @@ namespace API.Tests
             Assert.True(deleted);
         }
 
-        // Check new todo is added to list
+        // Test: adding a todo sets correct text
         [Fact]
         public async Task AddTodoCreates()
         {
             // Arrange
-            var svc = CreateService(Guid.NewGuid().ToString());
+            var svc = CreateService(Guid.NewGuid().ToString(), out _);
             var list = await svc.AddListAsync("List");
 
             // Act
@@ -175,12 +175,12 @@ namespace API.Tests
             Assert.Equal("Task", todo.Text);
         }
 
-        // Check todo text is updated correctly
+        // Test: updating a todo changes its text
         [Fact]
         public async Task UpdateTodoChanges()
         {
             // Arrange
-            var svc = CreateService(Guid.NewGuid().ToString());
+            var svc = CreateService(Guid.NewGuid().ToString(), out _);
             var list = await svc.AddListAsync("L");
             var todo = await svc.AddTodoAsync(list.Id, "old");
 
@@ -188,15 +188,16 @@ namespace API.Tests
             var result = await svc.UpdateTodoAsync(todo.Id, "new");
 
             // Assert
-            Assert.Equal("new", result.Text);
+            Assert.NotNull(result);
+            Assert.Equal("new", result!.Text);
         }
 
-        // Check specified todo is deleted
+        // Test: deleting a todo removes it
         [Fact]
         public async Task DeleteTodoRemoves()
         {
             // Arrange
-            var svc = CreateService(Guid.NewGuid().ToString());
+            var svc = CreateService(Guid.NewGuid().ToString(), out _);
             var list = await svc.AddListAsync("L");
             var t1 = await svc.AddTodoAsync(list.Id, "first");
             await svc.AddTodoAsync(list.Id, "second");
@@ -208,12 +209,12 @@ namespace API.Tests
             Assert.True(deleted);
         }
 
-        // Check deletion disabled when feature flag off
+        // Test: deletion disabled when feature flag is off
         [Fact]
         public async Task DeleteListFlagDisabled()
         {
             // Arrange
-            var svc = CreateService(Guid.NewGuid().ToString(), flagEnabled: false);
+            var svc = CreateService(Guid.NewGuid().ToString(), out _, flagEnabled: false);
             var list = await svc.AddListAsync("F");
 
             // Act
@@ -221,6 +222,69 @@ namespace API.Tests
 
             // Assert
             Assert.False(result);
+        }
+
+        // Test: AddList logs creation message
+        [Fact]
+        public async Task AddList_LogsInformation()
+        {
+            // Arrange
+            var dbName = Guid.NewGuid().ToString();
+            var options = new DbContextOptionsBuilder<TodoContext>()
+                .UseInMemoryDatabase(dbName)
+                .Options;
+            var ctx = new TodoContext(options);
+            var mockLogger = new Mock<ILogger<TodoListService>>();
+            var fh = new Mock<IClientContext>();
+            fh.Setup(f => f.IsSet("enableListDeletion")).Returns(true);
+            fh.Setup(f => f["enableListDeletion"].IsEnabled).Returns(true);
+            var svc = new TodoListService(ctx, mockLogger.Object, fh.Object);
+
+            // Act
+            await svc.AddListAsync("LoggedList");
+
+            // Assert
+            mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Information,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Creating list LoggedList")),
+                    null,
+                    It.IsAny<Func<It.IsAnyType, Exception, string>>()
+                ), Times.Once
+            );
+        }
+
+        // Test: UpdateTodo logs warning when todo not found
+        [Fact]
+        public async Task UpdateTodo_LogsWarningOnMissing()
+        {
+            // Arrange
+            var dbName = Guid.NewGuid().ToString();
+            var options = new DbContextOptionsBuilder<TodoContext>()
+                .UseInMemoryDatabase(dbName)
+                .Options;
+            var ctx = new TodoContext(options);
+            var mockLogger = new Mock<ILogger<TodoListService>>();
+            var fh = new Mock<IClientContext>();
+            fh.Setup(f => f.IsSet("enableListDeletion")).Returns(true);
+            fh.Setup(f => f["enableListDeletion"].IsEnabled).Returns(true);
+            var svc = new TodoListService(ctx, mockLogger.Object, fh.Object);
+
+            // Act
+            var result = await svc.UpdateTodoAsync(999, "text");
+
+            // Assert
+            Assert.Null(result);
+            mockLogger.Verify(
+                x => x.Log(
+                    LogLevel.Warning,
+                    It.IsAny<EventId>(),
+                    It.Is<It.IsAnyType>((v, t) => v.ToString().Contains("Attempt to update non-existent todo 999")),
+                    null,
+                    It.IsAny<Func<It.IsAnyType, Exception, string>>()
+                ), Times.Once
+            );
         }
     }
 }

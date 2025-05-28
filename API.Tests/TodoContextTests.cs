@@ -1,8 +1,10 @@
-﻿using System.Linq;
+﻿// API.Tests/TodoContextTests.cs
+using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 using API.Data;
 using API.Models;
+using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace API.Tests
 {
@@ -19,11 +21,19 @@ namespace API.Tests
 
             // Act
             using var ctx = new TodoContext(options);
-            var cascadeBehavior = ctx.Model
+            var allFks = ctx.Model
                 .FindEntityType(typeof(Todo))!
-                .GetForeignKeys()
-                .First(fk => fk.PrincipalEntityType.ClrType == typeof(TodoList))
-                .DeleteBehavior;
+                .GetForeignKeys();
+
+            DeleteBehavior cascadeBehavior = default;
+            for (int i = 0; i < allFks.Count; i++)
+            {
+                if (allFks[i].PrincipalEntityType.ClrType == typeof(TodoList))
+                {
+                    cascadeBehavior = allFks[i].DeleteBehavior;
+                    break;
+                }
+            }
 
             // Assert
             Assert.Equal(DeleteBehavior.Cascade, cascadeBehavior);
@@ -76,13 +86,21 @@ namespace API.Tests
 
             // Act
             using var ctx = new TodoContext(options);
-            var fkProperty = ctx.Model
+            var fkList = ctx.Model
                 .FindEntityType(typeof(Todo))!
-                .GetForeignKeys()
-                .First(fk => fk.PrincipalEntityType.ClrType == typeof(TodoList))
-                .Properties
-                .First()
-                .Name;
+                .GetForeignKeys();
+
+            IForeignKey matchingFk = null!;
+            for (int i = 0; i < fkList.Count; i++)
+            {
+                if (fkList[i].PrincipalEntityType.ClrType == typeof(TodoList))
+                {
+                    matchingFk = fkList[i];
+                    break;
+                }
+            }
+
+            var fkProperty = matchingFk.Properties[0].Name;
 
             // Assert
             Assert.Equal("TodoListId", fkProperty);
@@ -112,7 +130,6 @@ namespace API.Tests
             Assert.Contains("List", todoNavs);
             Assert.Contains("Todos", listNavs);
         }
-
 
         // Check primary key property is named "Id" on both entities
         [Fact]
@@ -161,4 +178,3 @@ namespace API.Tests
         }
     }
 }
-

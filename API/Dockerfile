@@ -12,7 +12,7 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
 
-# Copy csproj files and restore dependencies (cached until csproj changes)
+# Copy csproj files and restore dependencies 
 COPY ["API/API.csproj", "API/"]
 COPY ["Monitoring/Monitoring.csproj", "Monitoring/"]
 RUN --mount=type=cache,target=/root/.nuget \
@@ -37,5 +37,8 @@ RUN dotnet publish "API.csproj" \
 # Final image
 FROM base AS final
 WORKDIR /app
-COPY --from=publish /app/publish .
+
+# Copy published output as appuser (preserves ownership)
+COPY --from=publish --chown=appuser:appuser /app/publish .
+
 ENTRYPOINT ["dotnet", "API.dll"]

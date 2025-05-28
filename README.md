@@ -2,10 +2,9 @@
 
 Application 4th semester DevOps exam. 2025. <br />
 Server: http://141.147.1.249:3000/ <br/>
-Seq: http://141.147.1.249:5341/
 
 Technologies applied: (WIP) <br />
-- .net API
+- asp.net API
 - React + Vite
 - Serilog
 - FeautureHub

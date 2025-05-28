@@ -40,7 +40,7 @@ namespace API.Tests
         public async Task AddList_Null_ReturnsBadRequest()
         {
             // Act
-            var result = await _ctrl.AddList(null);
+            var result = await _ctrl.AddList(null!);
 
             // Assert
             Assert.IsType<BadRequestObjectResult>(result.Result);
@@ -118,7 +118,7 @@ namespace API.Tests
         public async Task GetTodos_Null_ReturnsOk()
         {
             // Arrange
-            _svc.Setup(s => s.GetTodosAsync(1)).ReturnsAsync((List<TodoDto>?)null);
+            _svc.Setup(s => s.GetTodosAsync(1)).ReturnsAsync((List<TodoDto>)null);
 
             // Act
             var actionResult = await _ctrl.GetTodos(1);
@@ -133,7 +133,7 @@ namespace API.Tests
         public async Task AddTodo_Null_ReturnsBadRequest()
         {
             // Act
-            var result = await _ctrl.AddTodo(1, null);
+            var result = await _ctrl.AddTodo(1, null!);
 
             // Assert
             Assert.IsType<BadRequestObjectResult>(result.Result);
@@ -189,10 +189,10 @@ namespace API.Tests
         public async Task UpdateTodo_NullText_ReturnsNotFound()
         {
             // Arrange
-            _svc.Setup(s => s.UpdateTodoAsync(5, null)).ReturnsAsync((TodoDto?)null);
+            _svc.Setup(s => s.UpdateTodoAsync(5, null!)).ReturnsAsync((TodoDto)null);
 
             // Act
-            var result = await _ctrl.UpdateTodo(5, null);
+            var result = await _ctrl.UpdateTodo(5, null!);
 
             // Assert
             Assert.IsType<NotFoundResult>(result.Result);
