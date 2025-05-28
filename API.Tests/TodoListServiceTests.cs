@@ -1,230 +1,181 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using API.Data;
+using API.Services;
+using FeatureHubSDK;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
-using API.Data;
-using API.Services;
-using API.DTOs;
-using FeatureHubSDK;
-using System;
-using System.Threading.Tasks;
 
 namespace API.Tests
 {
-    public class TodoListServiceTests
+    internal sealed class TestLogger<T> : ILogger<T>
     {
-        // Helper: create service with in-memory DB, mock logger, and feature flag
-        private static TodoListService CreateService(string dbName, out Mock<ILogger<TodoListService>> mockLogger, bool flagEnabled = true)
+        private sealed class NullScope : IDisposable
         {
-            var options = new DbContextOptionsBuilder<TodoContext>()
-                .UseInMemoryDatabase(dbName)
-                .Options;
-            var ctx = new TodoContext(options);
-
-            mockLogger = new Mock<ILogger<TodoListService>>();
-            var fh = new Mock<IClientContext>();
-            fh.Setup(f => f.IsSet("enableListDeletion")).Returns(flagEnabled);
-            var ffFlag = new Mock<IFeature>();
-            ffFlag.Setup(f => f.IsEnabled).Returns(flagEnabled);
-            fh.Setup(f => f["enableListDeletion"]).Returns(ffFlag.Object);
-
-            return new TodoListService(ctx, mockLogger.Object, fh.Object);
+            public static readonly NullScope Instance = new();
+            public void Dispose() { }
         }
 
-        // Test: AddList saves and logs correctly
+        public readonly List<(LogLevel Level, string Msg)> Records = new();
+
+        public IDisposable BeginScope<TState>(TState state) where TState : notnull => NullScope.Instance;
+        public bool IsEnabled(LogLevel level) => true;
+
+        public void Log<TState>(LogLevel level, EventId id, TState state,
+                                Exception? exception,
+                                Func<TState, Exception?, string> formatter)
+            => Records.Add((level, formatter(state, exception)));
+    }
+
+    public sealed class TodoListServiceTests
+    {
+        private static (TodoListService svc, TestLogger<TodoListService> log) BuildService(bool flagEnabled = true)
+        {
+            var opts = new DbContextOptionsBuilder<TodoContext>()
+                .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                .Options;
+            var ctx = new TodoContext(opts);
+
+            var log = new TestLogger<TodoListService>();
+
+            var ctxMock = new Mock<IClientContext>();
+            ctxMock.Setup(c => c.IsSet("enableListDeletion")).Returns(true);
+            var feature = new Mock<IFeature>();
+            feature.SetupGet(f => f.IsEnabled).Returns(flagEnabled);
+            ctxMock.Setup(c => c["enableListDeletion"]).Returns(feature.Object);
+
+            return (new TodoListService(ctx, log, ctxMock.Object), log);
+        }
+
         [Fact]
         public async Task AddList_SavesAndLogs()
         {
-            var dbName = Guid.NewGuid().ToString();
-            var svc = CreateService(dbName, out var logger);
+            var (svc, log) = BuildService();
+            var dto = await svc.AddListAsync("New List");
 
-            var result = await svc.AddListAsync("New List");
-
-            Assert.Equal("New List", result.Name);
-
-            logger.Verify(x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<object>((v, t) => v != null && v.ToString()!.Contains("Added new list")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
-                Times.Once);
+            Assert.Equal("New List", dto.Name);
+            Assert.Contains(log.Records, r => r.Msg.Contains("Added new list"));
         }
 
-        // Test: DeleteList returns false and logs warning if flag disabled
         [Fact]
-        public async Task DeleteList_FlagDisabled_ReturnsFalseAndLogs()
+        public async Task GetAllLists_Empty_Logs()
         {
-            var svc = CreateService(Guid.NewGuid().ToString(), out var logger, flagEnabled: false);
-            var result = await svc.DeleteListAsync(123);
-            Assert.False(result);
+            var (svc, log) = BuildService();
+            var all = await svc.GetAllListsAsync();
 
-            logger.Verify(x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<object>((v, t) => v != null && v.ToString()!.Contains("List deletion feature is disabled")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
-                Times.Once);
+            Assert.Empty(all);
+            Assert.Contains(log.Records, r => r.Msg.Contains("Retrieving all lists"));
         }
 
-        // Test: DeleteList returns false and logs warning if list not found
         [Fact]
-        public async Task DeleteList_NotFound_ReturnsFalseAndLogs()
+        public async Task AddTodo_SavesAndLogs()
         {
-            var svc = CreateService(Guid.NewGuid().ToString(), out var logger);
-            var result = await svc.DeleteListAsync(999);
-            Assert.False(result);
-
-            logger.Verify(x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<object>((v, t) => v != null && v.ToString()!.Contains("No list was found")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
-                Times.Once);
-        }
-
-        // Test: DeleteList success logs info
-        [Fact]
-        public async Task DeleteList_Success_DeletesAndLogs()
-        {
-            var dbName = Guid.NewGuid().ToString();
-            var svc = CreateService(dbName, out var logger);
-            var list = await svc.AddListAsync("DeleteMe");
-
-            var deleted = await svc.DeleteListAsync(list.Id);
-            Assert.True(deleted);
-
-            logger.Verify(x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<object>((v, t) => v != null && v.ToString()!.Contains("Successfully deleted")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
-                Times.Once);
-        }
-
-        // Test: AddTodo creates and logs info
-        [Fact]
-        public async Task AddTodo_CreatesAndLogs()
-        {
-            var dbName = Guid.NewGuid().ToString();
-            var svc = CreateService(dbName, out var logger);
-            var list = await svc.AddListAsync("List");
-
-            var todo = await svc.AddTodoAsync(list.Id, "Task");
-
-            Assert.Equal("Task", todo.Text);
-
-            logger.Verify(x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<object>((v, t) => v != null && v.ToString()!.Contains("Added todo")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
-                Times.Once);
-        }
-
-        // Test: UpdateTodo updates and logs info
-        [Fact]
-        public async Task UpdateTodo_UpdatesAndLogs()
-        {
-            var dbName = Guid.NewGuid().ToString();
-            var svc = CreateService(dbName, out var logger);
+            var (svc, log) = BuildService();
             var list = await svc.AddListAsync("L");
-            var todo = await svc.AddTodoAsync(list.Id, "old");
+            var todo = await svc.AddTodoAsync(list.Id, "task");
 
-            var updated = await svc.UpdateTodoAsync(todo.Id, "new");
-
-            Assert.NotNull(updated);
-            Assert.Equal("new", updated!.Text);
-
-            logger.Verify(x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<object>((v, t) => v != null && v.ToString()!.Contains("Updated todo")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
-                Times.Once);
+            Assert.Equal("task", todo.Text);
+            Assert.Contains(log.Records, r => r.Msg.Contains("Added todo"));
         }
 
-        // Test: UpdateTodo returns null and logs warning if not found
         [Fact]
-        public async Task UpdateTodo_ReturnsNullAndLogsWarning()
+        public async Task GetTodos_ReturnsOrdered_AndLogs()
         {
-            var svc = CreateService(Guid.NewGuid().ToString(), out var logger);
-            var result = await svc.UpdateTodoAsync(999, "text");
-            Assert.Null(result);
-
-            logger.Verify(x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<object>((v, t) => v != null && v.ToString()!.Contains("not found")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
-                Times.Once);
-        }
-
-        // Test: DeleteTodo removes and logs info
-        [Fact]
-        public async Task DeleteTodo_DeletesAndLogs()
-        {
-            var dbName = Guid.NewGuid().ToString();
-            var svc = CreateService(dbName, out var logger);
+            var (svc, log) = BuildService();
             var list = await svc.AddListAsync("L");
-            var todo = await svc.AddTodoAsync(list.Id, "toDelete");
-
-            var deleted = await svc.DeleteTodoAsync(todo.Id);
-            Assert.True(deleted);
-
-            logger.Verify(x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<object>((v, t) => v != null && v.ToString()!.Contains("Deleted todo")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
-                Times.Once);
-        }
-
-        // Test: DeleteTodo returns false and logs warning if not found
-        [Fact]
-        public async Task DeleteTodo_ReturnsFalseAndLogsWarning()
-        {
-            var svc = CreateService(Guid.NewGuid().ToString(), out var logger);
-            var deleted = await svc.DeleteTodoAsync(999);
-            Assert.False(deleted);
-
-            logger.Verify(x => x.Log(
-                LogLevel.Warning,
-                It.IsAny<EventId>(),
-                It.Is<object>((v, t) => v != null && v.ToString()!.Contains("not found")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
-                Times.Once);
-        }
-
-        // Test: GetTodos returns todos and logs info
-        [Fact]
-        public async Task GetTodos_ReturnsTodosAndLogs()
-        {
-            var dbName = Guid.NewGuid().ToString();
-            var svc = CreateService(dbName, out var logger);
-            var list = await svc.AddListAsync("L");
-            await svc.AddTodoAsync(list.Id, "Task1");
-            await svc.AddTodoAsync(list.Id, "Task2");
+            await svc.AddTodoAsync(list.Id, "a");
+            await svc.AddTodoAsync(list.Id, "b");
 
             var todos = await svc.GetTodosAsync(list.Id);
 
             Assert.Equal(2, todos.Count);
+            Assert.True(todos[0].Id < todos[1].Id);
+            Assert.Contains(log.Records, r => r.Msg.Contains($"Fetching todos for list ID {list.Id}"));
+        }
 
-            logger.Verify(x => x.Log(
-                LogLevel.Information,
-                It.IsAny<EventId>(),
-                It.Is<object>((v, t) => v != null && v.ToString()!.Contains($"Fetching todos for list ID {list.Id}")),
-                It.IsAny<Exception?>(),
-                It.IsAny<Func<object, Exception?, string>>()),
-                Times.Once);
+        [Fact]
+        public async Task UpdateTodo_Existing_LogsInfo()
+        {
+            var (svc, log) = BuildService();
+            var list = await svc.AddListAsync("L");
+            var t = await svc.AddTodoAsync(list.Id, "old");
+
+            var upd = await svc.UpdateTodoAsync(t.Id, "new");
+
+            Assert.NotNull(upd);
+            Assert.Equal("new", upd!.Text);
+            Assert.Contains(log.Records, r => r.Msg.Contains("Updated todo"));
+        }
+
+        [Fact]
+        public async Task UpdateTodo_NotFound_LogsWarning()
+        {
+            var (svc, log) = BuildService();
+            var upd = await svc.UpdateTodoAsync(999, "x");
+
+            Assert.Null(upd);
+            Assert.Contains(log.Records, r => r.Level == LogLevel.Warning && r.Msg.Contains("not found"));
+        }
+
+        [Fact]
+        public async Task DeleteTodo_Existing_LogsInfo()
+        {
+            var (svc, log) = BuildService();
+            var list = await svc.AddListAsync("L");
+            var t = await svc.AddTodoAsync(list.Id, "d");
+
+            var ok = await svc.DeleteTodoAsync(t.Id);
+
+            Assert.True(ok);
+            Assert.Contains(log.Records, r => r.Msg.Contains("Deleted todo"));
+        }
+
+        [Fact]
+        public async Task DeleteTodo_NotFound_LogsWarning()
+        {
+            var (svc, log) = BuildService();
+            var ok = await svc.DeleteTodoAsync(999);
+
+            Assert.False(ok);
+            Assert.Contains(log.Records, r => r.Level == LogLevel.Warning && r.Msg.Contains("not found"));
+        }
+
+        [Fact]
+        public async Task DeleteList_FlagDisabled_LogsWarning()
+        {
+            var (svc, log) = BuildService(flagEnabled: false);
+            var list = await svc.AddListAsync("L");
+
+            var ok = await svc.DeleteListAsync(list.Id);
+
+            Assert.False(ok);
+            Assert.Contains(log.Records, r => r.Level == LogLevel.Warning && r.Msg.Contains("feature is disabled"));
+        }
+
+        [Fact]
+        public async Task DeleteList_NotFound_LogsWarning()
+        {
+            var (svc, log) = BuildService();
+            var ok = await svc.DeleteListAsync(999);
+
+            Assert.False(ok);
+            Assert.Contains(log.Records, r => r.Level == LogLevel.Warning && r.Msg.Contains("No list was found"));
+        }
+
+        [Fact]
+        public async Task DeleteList_HappyPath_LogsInfo()
+        {
+            var (svc, log) = BuildService();
+            var list = await svc.AddListAsync("Z");
+
+            var ok = await svc.DeleteListAsync(list.Id);
+
+            Assert.True(ok);
+            Assert.Contains(log.Records, r => r.Msg.Contains("Successfully deleted"));
         }
     }
 }
