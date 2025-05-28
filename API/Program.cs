@@ -1,9 +1,10 @@
-using Serilog;
+﻿using Serilog;
 using Monitoring;
 using API.Data;
 using API.Services;
 using Microsoft.EntityFrameworkCore;
 using FeatureHubSDK;
+using FeatureFlags;
 
 namespace API
 {
@@ -31,21 +32,10 @@ namespace API
                       .Enrich.FromLogContext()
                 );
 
-                var edgeUrl = Environment.GetEnvironmentVariable("FEATUREHUB_URL");
-                var apiKey = Environment.GetEnvironmentVariable("FEATUREHUB_API_KEY");
+                // Log current environment explicitly
+                logger.Information("Current environment: {Env}", builder.Environment.EnvironmentName);
 
-                if (string.IsNullOrWhiteSpace(edgeUrl) || string.IsNullOrWhiteSpace(apiKey))
-                    throw new InvalidOperationException("FEATUREHUB_URL and FEATUREHUB_API_KEY must be set");
-
-                var featureHubContext = new EdgeFeatureHubConfig(edgeUrl, apiKey)
-                                            .NewContext()
-                                            .Build()
-                                            .GetAwaiter()
-                                            .GetResult();
-
-                builder.Services.AddSingleton<IClientContext>(featureHubContext);
-
-
+                // Register services
                 builder.Services.AddControllers();
                 builder.Services.AddEndpointsApiExplorer();
                 builder.Services.AddSwaggerGen();
@@ -55,35 +45,47 @@ namespace API
                     options.AddPolicy("AllowFrontend", policy =>
                     {
                         policy.WithOrigins(
-                                "http://localhost:3000",
-                                "http://141.147.1.249:3000"
-                            )
-                            .AllowAnyMethod()
-                            .AllowAnyHeader();
+                            "http://localhost:3000",
+                            "http://141.147.1.249:3000"
+                        )
+                        .AllowAnyMethod()
+                        .AllowAnyHeader();
                     });
                 });
 
+                // Validate DB env vars
                 var dbHost = Environment.GetEnvironmentVariable("MYSQL_HOST");
                 var dbName = Environment.GetEnvironmentVariable("MYSQL_DATABASE");
                 var dbUser = Environment.GetEnvironmentVariable("MYSQL_USER");
                 var dbPass = Environment.GetEnvironmentVariable("MYSQL_PASSWORD");
+
+                if (string.IsNullOrWhiteSpace(dbHost) ||
+                    string.IsNullOrWhiteSpace(dbName) ||
+                    string.IsNullOrWhiteSpace(dbUser) ||
+                    string.IsNullOrWhiteSpace(dbPass))
+                {
+                    throw new InvalidOperationException("One or more required DB environment variables are missing.");
+                }
+
                 var connectionString = $"Server={dbHost};Database={dbName};User={dbUser};Password={dbPass};";
 
                 builder.Services.AddDbContext<TodoContext>(options =>
-                    options.UseMySql(connectionString, new MySqlServerVersion(new Version(10, 6))));
+                    options.UseMySql(connectionString, new MySqlServerVersion(new Version(10, 6)))
+                );
 
+                // Register FeatureHub safely
+                FeatureFlagInitializer.Configure(builder.Services);
+
+                // Your services
                 builder.Services.AddScoped<ITodoListService, TodoListService>();
 
                 var app = builder.Build();
 
-                if (app.Environment.IsDevelopment())
-                {
-                    app.UseSwagger();
-                    app.UseSwaggerUI();
-                }
+                // Always enable Swagger UI, serve at root "/"
+                app.UseSwagger();
+                app.UseSwaggerUI(c => c.RoutePrefix = "");
 
                 app.UseCors("AllowFrontend");
-                app.UseHttpsRedirection();
                 app.UseAuthorization();
                 app.MapControllers();
 

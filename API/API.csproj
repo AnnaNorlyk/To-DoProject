@@ -21,6 +21,8 @@
 	</ItemGroup>
 	<ItemGroup>
 		<ProjectReference Include="..\Monitoring\Monitoring.csproj" />
+		<ProjectReference Include="..\FeatureFlags\FeatureFlags.csproj" />
+		
 	</ItemGroup>
 	<ItemGroup>
 	  <Folder Include="Controllers\" />

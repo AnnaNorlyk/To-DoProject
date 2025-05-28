@@ -10,9 +10,9 @@ namespace API.Services
     {
         private readonly TodoContext _ctx;
         private readonly ILogger<TodoListService> _logger;
-        private readonly IClientContext _fh;
+        private readonly IClientContext? _fh;
 
-        public TodoListService(TodoContext ctx, ILogger<TodoListService> logger, IClientContext fh)
+        public TodoListService(TodoContext ctx, ILogger<TodoListService> logger, IClientContext? fh)
         {
             _ctx = ctx;
             _logger = logger;
@@ -38,7 +38,7 @@ namespace API.Services
         {
             if (_fh == null || !_fh.IsSet("enableListDeletion") || !_fh["enableListDeletion"].IsEnabled)
             {
-                _logger.LogWarning("List deletion feature is disabled.");
+                _logger.LogWarning("List deletion feature is disabled or FeatureHub not configured.");
                 return false;
             }
 

@@ -19,15 +19,14 @@ services:
       retries: 5
 
   backend:
-    image: ghcr.io/annanorlyk/todo-backend:staging
-    restart: always
-    depends_on:
-      mariadb:
-        condition: service_healthy
+    build:
+       context: .
+       dockerfile: ./API/Dockerfile
+
+    env_file:
+      - .env.local
     ports:
       - "5000:80"
-    env_file:
-      - .env 
     environment:
       ASPNETCORE_URLS:        "http://+:80"
       ASPNETCORE_ENVIRONMENT: "Development"
@@ -35,6 +34,15 @@ services:
       MYSQL_DATABASE:         "${MYSQL_DATABASE}"
       MYSQL_USER:             "${MYSQL_USER}"
       MYSQL_PASSWORD:         "${MYSQL_PASSWORD}"
+      SEQ_URL:                "${SEQ_URL}"  
+      FEATUREHUB_URL:         "${FEATUREHUB_URL}"
+      FEATUREHUB_API_KEY:     "${FEATUREHUB_API_KEY}"
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      flyway:
+        condition: service_completed_successfully
+    restart: on-failure
 
   flyway:
     image: flyway/flyway:latest
@@ -50,12 +58,16 @@ services:
       FLYWAY_PASSWORD: ${MYSQL_PASSWORD}
 
   frontend:
-    image: ghcr.io/annanorlyk/todo-frontend:staging
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    env_file:
+      - ./Frontend/.env.local
+    ports:
+      - "3000:80"
     depends_on:
       backend:
         condition: service_started
-    ports:
-      - "3000:80"
 
 volumes:
-  mariadb_data:  
+  mariadb_data:
