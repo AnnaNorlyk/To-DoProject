@@ -58,4 +58,4 @@ services:
       - "3000:80"
 
 volumes:
-  mariadb_data:   # if you need it for migrations, otherwise remove
+  mariadb_data:  

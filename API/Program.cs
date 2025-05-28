@@ -33,17 +33,18 @@ namespace API
 
                 var edgeUrl = Environment.GetEnvironmentVariable("FEATUREHUB_URL");
                 var apiKey = Environment.GetEnvironmentVariable("FEATUREHUB_API_KEY");
-                IClientContext featureHubContext = null;
-                if (!string.IsNullOrWhiteSpace(edgeUrl) && !string.IsNullOrWhiteSpace(apiKey))
-                {
-                    featureHubContext = new EdgeFeatureHubConfig(edgeUrl, apiKey)
+
+                if (string.IsNullOrWhiteSpace(edgeUrl) || string.IsNullOrWhiteSpace(apiKey))
+                    throw new InvalidOperationException("FEATUREHUB_URL and FEATUREHUB_API_KEY must be set");
+
+                var featureHubContext = new EdgeFeatureHubConfig(edgeUrl, apiKey)
                                             .NewContext()
                                             .Build()
                                             .GetAwaiter()
                                             .GetResult();
-                }
 
                 builder.Services.AddSingleton<IClientContext>(featureHubContext);
+
 
                 builder.Services.AddControllers();
                 builder.Services.AddEndpointsApiExplorer();
