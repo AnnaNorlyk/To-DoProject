@@ -1,5 +1,4 @@
-﻿// API.Tests/TodoContextTests.cs
-using System.Linq;
+﻿using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 using API.Data;
@@ -23,7 +22,8 @@ namespace API.Tests
             using var ctx = new TodoContext(options);
             var allFks = ctx.Model
                 .FindEntityType(typeof(Todo))!
-                .GetForeignKeys();
+                .GetForeignKeys()
+                .ToList();            // materialize to list for Count and indexing
 
             DeleteBehavior cascadeBehavior = default;
             for (int i = 0; i < allFks.Count; i++)
@@ -88,7 +88,8 @@ namespace API.Tests
             using var ctx = new TodoContext(options);
             var fkList = ctx.Model
                 .FindEntityType(typeof(Todo))!
-                .GetForeignKeys();
+                .GetForeignKeys()
+                .ToList();            // materialize to list for indexing
 
             IForeignKey matchingFk = null!;
             for (int i = 0; i < fkList.Count; i++)
